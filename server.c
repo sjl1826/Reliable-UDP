@@ -129,7 +129,7 @@ void initiateFINProcess(int sockfd, const struct sockaddr * cliaddr, int len, in
 	}
 	timeNow();
 	if(current.tv_sec > finWait) {
-		initiateFINProcess(sockfd, cliaddr, len, seqNum, ackNum);
+		initiateFINProcess(sockfd, (const struct sockaddr *) &cliaddr, len, seqNum, ackNum);
 	}
 
 	buff[new_sock] = '\0';
@@ -224,7 +224,8 @@ int main(int argc, char *argv[]) {
 			if(isFirstPacket) {
 				isFirstPacket = 0;
 				numConnections+=1;
-				sprintf(fileName, "%d.file\0", numConnections);
+				sprintf(fileName, "%d.file", numConnections);
+				fileName[6] = '\0';
 				openFile(fileName);
 				timeNow();
 				dataWaitTime = current.tv_sec + 10;
@@ -233,7 +234,7 @@ int main(int argc, char *argv[]) {
 			setBufACK(ackHead.buf, ACK);
 		} else if(strcmp(rtype, "FIN") == 0) {
 			finFlag = 1;
-			setBufAck(ackHead.buf, ACK);
+			setBufACK(ackHead.buf, ACK);
 		} else if(strcmp(rtype, "ACK") == 0) {
 			timeNow();
 			waitTime = current.tv_sec + 10;
@@ -250,7 +251,7 @@ int main(int argc, char *argv[]) {
 		       len);
 		printf("SEND %hu %hu %d %d %s\n", ackHead.seqNum, ackHead.ackNum, 0, 0, stype);
 		if(finFlag) {
-			initiateFINProcess(sockfd, &cliaddr, len, seqNum, ackHead.ackNum);
+			initiateFINProcess(sockfd, (const struct sockaddr *) &cliaddr, len, seqNum, ackHead.ackNum);
 			//Reset variables
 			finFlag = 0;
 			numConnections = 0;
