@@ -44,7 +44,7 @@ typedef struct Packet {
 
 void signalHandler(int sig) {
 	if(sig == SIGQUIT || sig == SIGTERM) {
-		//TODO: WRITE INTERRUPT IN FILE
+		fprintf(currentFile, "INTERRUPT");
 		exit(0);
 	}
 }
@@ -136,8 +136,7 @@ void initiateFINProcess(int sockfd, const struct sockaddr * cliaddr, int len, in
 	Header *receivedACK = (Header *) buff;
 	char* receivedACKType = ackType((*receivedACK).buf);
 	if(strcmp(receivedACKType, "ACK") == 0) {
-		close(sockfd);
-		//close file
+		fclose(currentFile);
 	}
 	printf("RECV %hu %hu %d %d %s\n", (*receivedACK).seqNum, (*receivedACK).ackNum, 0, 0, receivedACKType);
 }
@@ -185,7 +184,7 @@ int main(int argc, char *argv[]) {
 	int numConnections = 0;
 	int isFirstPacket = 1;
 	unsigned short seqNum = randomSeq();
-	char fileName[7] = "1.file\0";
+	char fileName[8];
 	
 	while(1) {
 		// Receive packet
@@ -225,16 +224,18 @@ int main(int argc, char *argv[]) {
 				isFirstPacket = 0;
 				numConnections+=1;
 				sprintf(fileName, "%d.file", numConnections);
-				fileName[6] = '\0';
+				fileName[7] = '\0';
 				openFile(fileName);
 				timeNow();
 				dataWaitTime = current.tv_sec + 10;
+				fprintf(currentFile, "%s", (*receivedPacket).payload);
 			}
 		} else if(packetReceivedFlag == 1) {
 			setBufACK(ackHead.buf, ACK);
+			fprintf(currentFile, "%s", (*receivedPacket).payload);
 		} else if(strcmp(rtype, "FIN") == 0) {
 			finFlag = 1;
-			setBufACK(ackHead.buf, ACK);
+			setBufACK(ackHead.buf, FINACK);
 		} else if(strcmp(rtype, "ACK") == 0) {
 			timeNow();
 			waitTime = current.tv_sec + 10;
