@@ -127,10 +127,10 @@ void initiateFINProcess(int sockfd, const struct sockaddr * cliaddr, int len, in
 		close(sockfd);
 		exit(EXIT_FAILURE);
 	}
-	timeNow();
-	if(current.tv_sec > finWait) {
-		initiateFINProcess(sockfd, (const struct sockaddr *) &cliaddr, len, seqNum, ackNum);
-	}
+	// timeNow();
+	// if(current.tv_sec > finWait) {
+	// 	initiateFINProcess(sockfd, (const struct sockaddr *) &cliaddr, len, seqNum, ackNum);
+	// }
 
 	buff[new_sock] = '\0';
 	Header *receivedACK = (Header *) buff;
