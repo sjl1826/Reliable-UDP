@@ -136,7 +136,6 @@ void initiateFINProcess(int sockfd, const struct sockaddr * cliaddr, int len, in
 	Header *receivedACK = (Header *) buff;
 	char* receivedACKType = ackType((*receivedACK).buf);
 	if(strcmp(receivedACKType, "ACK") == 0) {
-		close(sockfd);
 		//close file
 	}
 	printf("RECV %hu %hu %d %d %s\n", (*receivedACK).seqNum, (*receivedACK).ackNum, 0, 0, receivedACKType);
@@ -234,7 +233,7 @@ int main(int argc, char *argv[]) {
 			setBufACK(ackHead.buf, ACK);
 		} else if(strcmp(rtype, "FIN") == 0) {
 			finFlag = 1;
-			setBufACK(ackHead.buf, ACK);
+			setBufACK(ackHead.buf, FINACK);
 		} else if(strcmp(rtype, "ACK") == 0) {
 			timeNow();
 			waitTime = current.tv_sec + 10;
