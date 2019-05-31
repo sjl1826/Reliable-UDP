@@ -44,7 +44,7 @@ typedef struct Packet {
 
 void signalHandler(int sig) {
 	if(sig == SIGQUIT || sig == SIGTERM) {
-		//TODO: WRITE INTERRUPT IN FILE
+		fprintf(currentFile, "INTERRUPT");
 		exit(0);
 	}
 }
