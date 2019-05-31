@@ -327,7 +327,7 @@ int main(int argc, char *argv[]) {
     receiveACK();
     Header finAck;
     finAck.seqNum = startSeq + 1;
-    finAck.ackNum = recSeqNum + 1;
+    finAck.ackNum = 0;
     setBufACK(finAck.buf, ACK);
     finAck.padding = 0;
     char* finAckH = (char *) &finAck;
