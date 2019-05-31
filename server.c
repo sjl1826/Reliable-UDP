@@ -111,7 +111,7 @@ void openFile(char* fileName) {
 void initiateFINProcess(int sockfd, const struct sockaddr * cliaddr, int len, int seqNum, int ackNum) {
 	Header fin;
 	fin.seqNum = seqNum;
-	fin.ackNum = ackNum;
+	fin.ackNum = 0;
 	setBufACK(fin.buf, FIN);
 	char* type = ackType(fin.buf);
 	sendto(sockfd, (const char *)&fin, 12, MSG_CONFIRM, cliaddr, len);
