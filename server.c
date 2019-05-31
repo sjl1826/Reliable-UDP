@@ -121,16 +121,14 @@ void initiateFINProcess(int sockfd, const struct sockaddr * cliaddr, int len, in
 
 	int new_sock;
 	char buff[MAXLINE];
-	new_sock = recvfrom(sockfd, (char *)buff, MAXLINE, MSG_WAITALL, (struct sockaddr *) &cliaddr, &len);
-	if(new_sock < 0) {
-		perror("ERROR in recvfrom");
-		close(sockfd);
-		exit(EXIT_FAILURE);
+	while(new_sock <= 0) {
+		new_sock = recvfrom(sockfd, (char *)buff, MAXLINE, MSG_DONTWAIT, (struct sockaddr *) &cliaddr, &len);
+		timeNow();
+		if(current.tv_sec > finWait) {
+			initiateFINProcess(sockfd, (const struct sockaddr *) &cliaddr, len, seqNum, ackNum);
+			return;
+		}
 	}
-	// timeNow();
-	// if(current.tv_sec > finWait) {
-	// 	initiateFINProcess(sockfd, (const struct sockaddr *) &cliaddr, len, seqNum, ackNum);
-	// }
 
 	buff[new_sock] = '\0';
 	Header *receivedACK = (Header *) buff;
