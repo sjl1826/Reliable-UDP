@@ -80,7 +80,7 @@ char* ackType(const char buf[]) {
 		return "ACK SYN";
 	} else if(strcmp(buf, "001\0") == 0) {
 		return "FIN";
-	} else if(strcmp(buf, "011\0") == 0) {
+	} else if(strcmp(buf, "101\0") == 0) {
 		return "ACK FIN";
 	}
 
