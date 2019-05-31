@@ -42,6 +42,7 @@ int cwnd = 512;
 int acked = 0;
 int finTime = 0;
 int startData = 0;
+int finNum = 0;
 
 char buffer[MAXLINE];
 
@@ -84,7 +85,7 @@ char* ackType(const char buf[]) {
                 type = "ACK SYN";
         } else if(strcmp(buf, "001") == 0) {
                 type = "FIN";
-        } else if(strcmp(buf, "011") == 0) {
+        } else if(strcmp(buf, "101") == 0) {
                 type = "ACK FIN";
         } else 
 		type = "";
@@ -133,12 +134,11 @@ void receiveACK() {
     }
 	buffer[n] = '\0';
     Header* receivedHead = (Header *) buffer;
-    recSeqNum = (*receivedHead).seqNum;
-    recAckNum = (*receivedHead).ackNum;
     char* rType = ackType((*receivedHead).buf);
-    if (finTime && strcmp(rType, "FIN") != 0 ) {
+    if (finTime && strcmp(rType, "FIN") != 0 ) 
         return;
-    }
+    recAckNum = (*receivedHead).ackNum;
+    recSeqNum = (*receivedHead).seqNum;
     printf("RECV %d %d %d %d %s\n", recSeqNum, recAckNum, cwnd,
            ssthresh, rType);
 	if (startData) {
@@ -310,7 +310,18 @@ int main(int argc, char *argv[]) {
     startData = 0;
 
     Header fin;
-    fin.seqNum = startSeq + 1;
+	 startSeq +=1;
+        if (startSeq == 25600) {
+            fin.seqNum = startSeq;
+            startSeq = 0;
+        } else if (startSeq > 25600) {
+            startSeq = 0;
+            fin.seqNum = startSeq;
+        } else {
+            fin.seqNum = startSeq;
+        }
+
+    fin.seqNum = startSeq;
     fin.ackNum = 0;
     setBufACK(fin.buf, FIN);
     fin.padding = 0;
@@ -326,8 +337,20 @@ int main(int argc, char *argv[]) {
     finTime = 1;
     receiveACK();
     Header finAck;
-    finAck.seqNum = startSeq + 1;
-    finAck.ackNum = 0;
+      startSeq +=1;
+        if (startSeq == 25600) {
+            finAck.seqNum = startSeq;
+            startSeq = 0;
+        } else if (startSeq > 25600) {
+            startSeq = 0;
+            finAck.seqNum = startSeq;
+        } else {
+            finAck.seqNum = startSeq;
+        }
+
+    finAck.seqNum = startSeq;
+
+    finAck.ackNum = recSeqNum + 1;
     setBufACK(finAck.buf, ACK);
     finAck.padding = 0;
     char* finAckH = (char *) &finAck;
