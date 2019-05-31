@@ -136,7 +136,7 @@ void receiveACK() {
     recSeqNum = (*receivedHead).seqNum;
     recAckNum = (*receivedHead).ackNum;
     char* rType = ackType((*receivedHead).buf);
-    if (finTime && strcmp(rType, "001") != 0 ) {
+    if (finTime && strcmp(rType, "FIN") != 0 ) {
         return;
     }
     printf("RECV %d %d %d %d %s\n", recSeqNum, recAckNum, cwnd,
@@ -311,7 +311,7 @@ int main(int argc, char *argv[]) {
 
     Header fin;
     fin.seqNum = startSeq + 1;
-    fin.ackNum = recSeqNum + 1;
+    fin.ackNum = 0;
     setBufACK(fin.buf, FIN);
     fin.padding = 0;
     char* finH = (char *) &fin;
@@ -325,7 +325,20 @@ int main(int argc, char *argv[]) {
     // for 2 seconds from server
     finTime = 1;
     receiveACK();
-    
+    Header finAck;
+    finAck.seqNum = startSeq + 1;
+    finAck.ackNum = recSeqNum + 1;
+    setBufACK(finAck.buf, ACK);
+    finAck.padding = 0;
+    char* finAckH = (char *) &finAck;
+    sendto(sockfd, (const char *)finAckH, 12,
+           MSG_CONFIRM, (const struct sockaddr *) &servaddr,
+           sizeof(servaddr));
+    char* sTypeFinAck = ackType(finAck.buf);
+    printf( "SEND %d %d %d %d %s\n", finAck.seqNum, finAck.ackNum,
+           cwnd, ssthresh, sTypeFinAck);
+
+
     fclose(content);
     close(sockfd);
     return 0;
