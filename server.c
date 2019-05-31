@@ -21,6 +21,7 @@
 #define FINACK 4
 
 struct timeval current;
+FILE* currentFile;
 
 void timeNow() {
 	struct timespec x;
@@ -43,6 +44,7 @@ typedef struct Packet {
 
 void signalHandler(int sig) {
 	if(sig == SIGQUIT || sig == SIGTERM) {
+		//TODO: WRITE INTERRUPT IN FILE
 		exit(0);
 	}
 }
@@ -102,6 +104,44 @@ unsigned short randomSeq() {
 	return num;
 }
 
+void openFile(char* fileName) {
+	currentFile = fopen(fileName, "a");
+}
+
+void initiateFINProcess(int sockfd, const struct sockaddr * cliaddr, int len, int seqNum, int ackNum) {
+	Header fin;
+	fin.seqNum = seqNum;
+	fin.ackNum = ackNum;
+	setBufACK(fin.buf, FIN);
+	char* type = ackType(fin.buf);
+	sendto(sockfd, (const char *)&fin, 12, MSG_CONFIRM, cliaddr, len);
+	printf("SEND %hu %hu %d %d %s\n", fin.seqNum, fin.ackNum, 0, 0, type);
+	timeNow();
+	unsigned long finWait = current.tv_sec + 10;
+
+	int new_sock;
+	char buff[MAXLINE];
+	new_sock = recvfrom(sockfd, (char *)buff, MAXLINE, MSG_WAITALL, (struct sockaddr *) &cliaddr, &len);
+	if(new_sock < 0) {
+		perror("ERROR in recvfrom");
+		close(sockfd);
+		exit(EXIT_FAILURE);
+	}
+	timeNow();
+	if(current.tv_sec > finWait) {
+		initiateFINProcess(sockfd, cliaddr, len, seqNum, ackNum);
+	}
+
+	buff[new_sock] = '\0';
+	Header *receivedACK = (Header *) buff;
+	char* receivedACKType = ackType((*receivedACK).buf);
+	if(strcmp(receivedACKType, "ACK") == 0) {
+		close(sockfd);
+		//close file
+	}
+	printf("RECV %hu %hu %d %d %s\n", (*receivedACK).seqNum, (*receivedACK).ackNum, 0, 0, receivedACKType);
+}
+
 int main(int argc, char *argv[]) {
 	if(argc < 2) {
 		fprintf(stderr, "ERROR: Not enough arguments");
@@ -132,23 +172,26 @@ int main(int argc, char *argv[]) {
 	servaddr.sin_port = htons(portnum); 
 
 	// Bind the socket with the server address 
-	if (bind(sockfd, (const struct sockaddr *)&servaddr, sizeof(servaddr)) < 0) { 
+	if(bind(sockfd, (const struct sockaddr *)&servaddr, sizeof(servaddr)) < 0) { 
 		perror("bind failed"); 
 		close(sockfd);
 		exit(EXIT_FAILURE); 
 	}
-	// timeNow();
-	unsigned long waitTime;
+
+	unsigned long waitTime = 0;
+	unsigned long dataWaitTime = 0;
 
 	int finFlag = 0;
 	int numConnections = 0;
+	int isFirstPacket = 1;
 	unsigned short seqNum = randomSeq();
-
+	char fileName[7] = "1.file\0";
+	
 	while(1) {
 		// Receive packet
 		int len, new_socket;
-
-		if(current.tv_sec > waitTime) {
+		timeNow();
+		if(waitTime != 0 && current.tv_sec > waitTime) {
 			printf("Start FIN process");
 		}
 		new_socket = recvfrom(sockfd, (char *)buffer, MAXLINE, MSG_WAITALL, (struct sockaddr *) &cliaddr, &len);
@@ -156,6 +199,10 @@ int main(int argc, char *argv[]) {
 			perror("ERROR in recvfrom");
 			close(sockfd);
 			exit(EXIT_FAILURE);
+		}
+		timeNow();
+		if(dataWaitTime != 0 && current.tv_sec > dataWaitTime) {
+			//Start the FIN process to close the connection
 		}
 		buffer[new_socket] = '\0';
 		Header *receivedHead = (Header *) buffer;
@@ -174,11 +221,19 @@ int main(int argc, char *argv[]) {
 
 		if(strcmp(rtype, "SYN") == 0) {
 			setBufACK(ackHead.buf, SYNACK);
+			if(isFirstPacket) {
+				isFirstPacket = 0;
+				numConnections+=1;
+				sprintf(fileName, "%d.file\0", numConnections);
+				openFile(fileName);
+				timeNow();
+				dataWaitTime = current.tv_sec + 10;
+			}
 		} else if(packetReceivedFlag == 1) {
 			setBufACK(ackHead.buf, ACK);
 		} else if(strcmp(rtype, "FIN") == 0) {
 			finFlag = 1;
-			setBufAck(ackHead.buf, FINACK);
+			setBufAck(ackHead.buf, ACK);
 		} else if(strcmp(rtype, "ACK") == 0) {
 			timeNow();
 			waitTime = current.tv_sec + 10;
@@ -194,6 +249,13 @@ int main(int argc, char *argv[]) {
 			MSG_CONFIRM, (const struct sockaddr *) &cliaddr, 
 		       len);
 		printf("SEND %hu %hu %d %d %s\n", ackHead.seqNum, ackHead.ackNum, 0, 0, stype);
+		if(finFlag) {
+			initiateFINProcess(sockfd, &cliaddr, len, seqNum, ackHead.ackNum);
+			//Reset variables
+			finFlag = 0;
+			numConnections = 0;
+			isFirstPacket = 1;
+		}
 	}
 	
 	close(sockfd);
