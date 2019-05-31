@@ -253,7 +253,6 @@ int main(int argc, char *argv[]) {
 			initiateFINProcess(sockfd, (const struct sockaddr *) &cliaddr, len, seqNum, ackHead.ackNum);
 			//Reset variables
 			finFlag = 0;
-			numConnections = 0;
 			isFirstPacket = 1;
 		}
 	}
