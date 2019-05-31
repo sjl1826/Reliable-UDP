@@ -1,7 +1,7 @@
 .SILENT:
 
 objects = server client
-all: clean $(objects)
+all: $(objects)
 
 server:
 	gcc -o server server.c

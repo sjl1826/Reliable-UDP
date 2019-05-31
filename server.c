@@ -226,8 +226,6 @@ int main(int argc, char *argv[]) {
 				openFile(fileName);
 				timeNow();
 				dataWaitTime = current.tv_sec + 10;
-				if(currentFile != NULL)
-					fprintf(currentFile, "%s", (*receivedPacket).payload);
 			}
 		} else if(packetReceivedFlag == 1) {
 			setBufACK(ackHead.buf, ACK);
