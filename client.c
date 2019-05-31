@@ -144,8 +144,12 @@ void receiveACK() {
 	if (startData) {
 		if (cwnd < ssthresh) 
 			cwnd +=512;
-		else
+		else {
 			cwnd += (512 * 512) / cwnd;
+			if (cwnd > 10240) {
+				cwnd = 10240;
+			}
+			}
 	count -=512;
 	}
 }
@@ -284,17 +288,24 @@ int main(int argc, char *argv[]) {
     // start keeping track of cwnd
 	startData = 1;
 	bytesRead = fread(fileBuffer, 1, 512, content);  
+	int count1 = 0;
+	int count2 =0;
 	while(bytesRead == MAXPAYLOAD) {
 		if((count + 512) <= cwnd) {
 			sendPacket(bytesRead, fileBuffer);
             count += 512;
+		count1+=1;
 	  	}
 	 	if(count >= cwnd || ( cwnd - count < 512  )) {
 			while (count > 0) {
 			receiveACK();
+			count2 +=1; 
+			printf( "%d %d %d\n", count, count1, count2);
+
           }
 		}
 	   bytesRead = fread(fileBuffer, 1, 512, content);
+// printf("%d %d %d \n ", count, cwnd, bytesRead);
 	 }
 
     // doesn't divide evenly

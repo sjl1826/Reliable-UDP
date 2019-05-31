@@ -189,7 +189,7 @@ int main(int argc, char *argv[]) {
 		int len, new_socket;
 		timeNow();
 		if(waitTime != 0 && current.tv_sec > waitTime) {
-			printf("Start FIN process");
+			//printf("Start FIN process");
 		}
 		new_socket = recvfrom(sockfd, (char *)buffer, MAXLINE, MSG_WAITALL, (struct sockaddr *) &cliaddr, &len);
 		if(new_socket < 0) {
