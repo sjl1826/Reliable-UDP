@@ -184,7 +184,7 @@ int main(int argc, char *argv[]) {
 	int numConnections = 0;
 	int isFirstPacket = 1;
 	unsigned short seqNum = randomSeq();
-	char fileName[7] = "1.file\0";
+	char fileName[8];
 	
 	while(1) {
 		// Receive packet
@@ -224,7 +224,7 @@ int main(int argc, char *argv[]) {
 				isFirstPacket = 0;
 				numConnections+=1;
 				sprintf(fileName, "%d.file", numConnections);
-				fileName[6] = '\0';
+				fileName[7] = '\0';
 				openFile(fileName);
 				timeNow();
 				dataWaitTime = current.tv_sec + 10;
