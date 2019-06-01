@@ -186,13 +186,20 @@ int main(int argc, char *argv[]) {
 	
 	while(1) {
 		// Receive packet
-		int len, new_socket;
+		int len, new_socket = 0;
 		timeNow();
-		if(waitTime != 0 && current.tv_sec > waitTime) {
-			//printf("Start FIN process");
+		waitTime = current.tv_sec + 10;
+		while(new_socket <=0 && current.tv_sec < waitTime) {
+		  new_socket = recvfrom(sockfd, (char *)buffer, MAXLINE, MSG_DONTWAIT, (struct sockaddr *) &cliaddr, &len);
+		  timeNow();
 		}
-		new_socket = recvfrom(sockfd, (char *)buffer, MAXLINE, MSG_WAITALL, (struct sockaddr *) &cliaddr, &len);
-		if(new_socket < 0) {
+
+		if(new_socket < 0 && isFirstPacket == 0) {
+		  initiateFINProcess(sockfd, (const struct sockaddr *) &cliaddr, len, seqNum, 0);
+		  finFlag = 0;
+		  isFirstPacket = 1;
+		  continue;
+		} else if(new_socket < 0) {
 			perror("ERROR in recvfrom");
 			close(sockfd);
 			exit(EXIT_FAILURE);
