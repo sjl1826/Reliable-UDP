@@ -1,4 +1,3 @@
-
 // Client side implementation of UDP client-server model
 #include <stdio.h>
 //#include <ctime.h>
@@ -59,62 +58,62 @@ typedef struct Packet {
 } Packet;
 
 int randomSeq() {
-	srand(time(NULL));
-	int num = (rand() % (25600 + 1));
-	return num;
+    srand(time(NULL));
+    int num = (rand() % (25600 + 1));
+    return num;
 }
 
 struct timeval current;
 
 void  timeNow() {
-
-struct timespec x;
-	clock_gettime(CLOCK_REALTIME, &x);
-	current.tv_sec = x.tv_sec;
-	current.tv_usec = x.tv_nsec / 1000;
-
+    
+    struct timespec x;
+    clock_gettime(CLOCK_REALTIME, &x);
+    current.tv_sec = x.tv_sec;
+    current.tv_usec = x.tv_nsec / 1000;
+    
 }
 
 char* ackType(const char buf[]) {
-        char* type;
-        if(strcmp(buf, "100") == 0) {
-                type = "ACK";
-        } else if(strcmp(buf, "010") == 0) {
-                type = "SYN";
-        } else if(strcmp(buf, "110") == 0) {
-                type = "ACK SYN";
-        } else if(strcmp(buf, "001") == 0) {
-                type = "FIN";
-        } else if(strcmp(buf, "101") == 0) {
-                type = "ACK FIN";
-        } else 
-		type = "";
-        return type;
+    char* type;
+    if(strcmp(buf, "100") == 0) {
+        type = "ACK";
+    } else if(strcmp(buf, "010") == 0) {
+        type = "SYN";
+    } else if(strcmp(buf, "110") == 0) {
+        type = "ACK SYN";
+    } else if(strcmp(buf, "001") == 0) {
+        type = "FIN";
+    } else if(strcmp(buf, "101") == 0) {
+        type = "ACK FIN";
+    } else
+        type = "";
+    return type;
 }
 
 
 void setBufACK(char* buf, int num) {
-        switch(num) {
-                case ACK:
-                        buf[0] = '1'; buf[1] = '0'; buf[2] = '0';
-                        break;
-                case SYN:
-                        buf[0] = '0'; buf[1] = '1'; buf[2] = '0';
-                        break;
-                case SYNACK:
-                        buf[0] = '1'; buf[1] = '1'; buf[2] = '0';
-                        break;
-                case FIN:
-                        buf[0] = '0'; buf[1] = '0'; buf[2] = '1';
-                        break;
-                case FINACK:
-                        buf[0] = '1'; buf[1] = '0'; buf[2] = '1';
-                        break;
-                default:
-			buf[0] = '0'; buf[1] = '0'; buf[2] = '0';
-                        break;
-        }
-		buf[3] = '\0';
+    switch(num) {
+        case ACK:
+            buf[0] = '1'; buf[1] = '0'; buf[2] = '0';
+            break;
+        case SYN:
+            buf[0] = '0'; buf[1] = '1'; buf[2] = '0';
+            break;
+        case SYNACK:
+            buf[0] = '1'; buf[1] = '1'; buf[2] = '0';
+            break;
+        case FIN:
+            buf[0] = '0'; buf[1] = '0'; buf[2] = '1';
+            break;
+        case FINACK:
+            buf[0] = '1'; buf[1] = '0'; buf[2] = '1';
+            break;
+        default:
+            buf[0] = '0'; buf[1] = '0'; buf[2] = '0';
+            break;
+    }
+    buf[3] = '\0';
 }
 
 void receiveACK() {
@@ -132,26 +131,26 @@ void receiveACK() {
         close(sockfd);
         exit(1);
     }
-	buffer[n] = '\0';
+    buffer[n] = '\0';
     Header* receivedHead = (Header *) buffer;
     char* rType = ackType((*receivedHead).buf);
-    if (finTime && strcmp(rType, "FIN") != 0 ) 
+    if (finTime && strcmp(rType, "FIN") != 0 )
         return;
     recAckNum = (*receivedHead).ackNum;
     recSeqNum = (*receivedHead).seqNum;
     printf("RECV %d %d %d %d %s\n", recSeqNum, recAckNum, cwnd,
            ssthresh, rType);
-	if (startData) {
-		if (cwnd < ssthresh) 
-			cwnd +=512;
-		else {
-			cwnd += (512 * 512) / cwnd;
-			if (cwnd > 10240) {
-				cwnd = 10240;
-			}
-			}
-	count -=512;
-	}
+    if (startData) {
+        if (cwnd < ssthresh)
+            cwnd +=512;
+        else {
+            cwnd += (512 * 512) / cwnd;
+            if (cwnd > 10240) {
+                cwnd = 10240;
+            }
+        }
+        count -=512;
+    }
 }
 
 void sendPacket(int bytesRead, char* fileBuffer) {
@@ -160,13 +159,13 @@ void sendPacket(int bytesRead, char* fileBuffer) {
     if (startSeq > 25600) {
         startSeq = 0;
         head.seqNum = startSeq;
-	setBufACK(head.buf, 6);
+        setBufACK(head.buf, 6);
     } else {
-		if (!acked) {
+        if (!acked) {
             head.seqNum = startSeq;
             acked = 1;
-		}
-		else {
+        }
+        else {
             startSeq+=bytesRead;
             if (startSeq == 25600) {
                 head.seqNum = startSeq;
@@ -176,25 +175,25 @@ void sendPacket(int bytesRead, char* fileBuffer) {
                 head.seqNum = startSeq;
             } else {
                 head.seqNum = startSeq;
-		}
-		setBufACK(head.buf, 6);
-        
-	  }
+            }
+            setBufACK(head.buf, 6);
+            
+        }
     }
     setBufACK(head.buf, 6);
     head.ackNum = 0;
     head.padding = 0;
     pack.h = head;
-	memset(pack.payload, 0, MAXPAYLOAD);
-	strncpy(pack.payload , fileBuffer, bytesRead);
-	char* sentPacket = (char *) &pack;
-	Packet* p = (Packet *) sentPacket;
-
+    memset(pack.payload, 0, MAXPAYLOAD);
+    strncpy(pack.payload , fileBuffer, bytesRead);
+    char* sentPacket = (char *) &pack;
+    Packet* p = (Packet *) sentPacket;
+    
     sendto(sockfd, (const char *)sentPacket, bytesRead + 12,
            MSG_CONFIRM, (const struct sockaddr *) &servaddr,
            sizeof(servaddr));
     char* sType = ackType(head.buf);
-
+    
     printf( "SEND %d %d %d %d %s\n", head.seqNum, head.ackNum,
            cwnd, ssthresh, sType);
     
@@ -245,103 +244,93 @@ int main(int argc, char *argv[]) {
     fseek(content, 0, SEEK_SET);
     char* fileBuffer = 0;
     int bytesRead = 0;
-    long size = ftell(content);
-    fileBuffer = malloc(size + 1);
-    filebBuffer[size] = '\0';
-	// start with random seqNum, send syn
-	startSeq = randomSeq();
-	int ackNum = 0;
-	Header firstH;
-	firstH.seqNum = startSeq;
-	firstH.ackNum = ackNum; 
+    fileBuffer = malloc(MAXPAYLOAD);
+    
+    // start with random seqNum, send syn
+    startSeq = randomSeq();
+    int ackNum = 0;
+    Header firstH;
+    firstH.seqNum = startSeq;
+    firstH.ackNum = ackNum;
     setBufACK(firstH.buf, 1);
-	firstH.padding = 0;
-	char* firstPacket = (char *) &firstH;
+    firstH.padding = 0;
+    char* firstPacket = (char *) &firstH;
     sendto(sockfd, (const char *)firstPacket, 12,
-        MSG_CONFIRM, (const struct sockaddr *) &servaddr,
-        sizeof(servaddr));
-	char* sType = ackType(firstH.buf);
-	printf( "SEND %d %d %d %d %s\n", firstH.seqNum, firstH.ackNum,
-		cwnd, ssthresh, sType); 
-	//wait for syn+ack or abort
+           MSG_CONFIRM, (const struct sockaddr *) &servaddr,
+           sizeof(servaddr));
+    char* sType = ackType(firstH.buf);
+    printf( "SEND %d %d %d %d %s\n", firstH.seqNum, firstH.ackNum,
+           cwnd, ssthresh, sType);
+    //wait for syn+ack or abort
     receiveACK();
     Header ackHead;
     startSeq +=1;
-        if (startSeq == 25600) {
-            ackHead.seqNum = startSeq;
-            startSeq = 0;
-        } else if (startSeq > 25600) {
-            startSeq = 0;
-            ackHead.seqNum = startSeq;
-        } else {
-            ackHead.seqNum = startSeq;
-        }
+    if (startSeq == 25600) {
+        ackHead.seqNum = startSeq;
+        startSeq = 0;
+    } else if (startSeq > 25600) {
+        startSeq = 0;
+        ackHead.seqNum = startSeq;
+    } else {
+        ackHead.seqNum = startSeq;
+    }
     ackHead.ackNum = recSeqNum +1;
     setBufACK(ackHead.buf, 0);
     ackHead.padding = 5;
     char* ackPacket = (char *) &ackHead;
     sendto(sockfd, (const char *)ackPacket, 12,
-        MSG_CONFIRM, (const struct sockaddr *) &servaddr,
-        sizeof(servaddr));
+           MSG_CONFIRM, (const struct sockaddr *) &servaddr,
+           sizeof(servaddr));
     char* sTypeAck = ackType(ackHead.buf);
-	printf( "SEND %d %d %d %d %s\n", ackHead.seqNum, ackHead.ackNum,
-                cwnd, ssthresh, sTypeAck); 
+    printf( "SEND %d %d %d %d %s\n", ackHead.seqNum, ackHead.ackNum,
+           cwnd, ssthresh, sTypeAck);
     // start keeping track of cwnd
-	startData = 1;
-	//bytesRead = fread(fileBuffer, 1, 512, content);  
-    char p[512];
-    long counter = size / 512;
-    long re = size % 512; 
-    long until = 0; 
-   	memset(p, 0, MAXPAYLOAD);
-	strncpy(p, fileBuffer, 512);
-	while( until != counter ) {
-		if((count + 512) <= cwnd) {
-			sendPacket(512, p);
+    startData = 1;
+    bytesRead = fread(fileBuffer, 1, 512, content);
+    int count1 = 0;
+    int count2 =0;
+    while(bytesRead == MAXPAYLOAD) {
+        if((count + 512) <= cwnd) {
+            sendPacket(bytesRead, fileBuffer);
             count += 512;
-            until+=1;
-            if (until <=counter) {
-            memset(p, 0, MAXPAYLOAD);
-	        strncpy(p, fileBuffer+(until*512), 512); 
+            count1+=1;
+        }
+        if(count >= cwnd || ( cwnd - count < 512  )) {
+            while (count > 0) {
+                receiveACK();
+                count2 +=1;
+                //    printf( "%d %d %d\n", count, count1, count2);
+                
             }
-	  	}
-	 	if(count >= cwnd || ( cwnd - count < 512  )) {
-			while (count > 0) {
-			receiveACK();
-		//	printf( "%d %d %d\n", count, count1, count2);
-
-          }
-		}
-	//   bytesRead = fread(fileBuffer, 1, 512, content);
-// printf("%d %d %d \n ", count, cwnd, bytesRead);
-	 }
-
+        }
+        bytesRead = fread(fileBuffer, 1, 512, content);
+        // printf("%d %d %d \n ", count, cwnd, bytesRead);
+    }
+    
     // doesn't divide evenly
-    if (re != 0) {
-        memset(p, 0, MAXPAYLOAD);
-        strncpy(p, fileBuffer+(until*512), re); 
-        sendPacket(512, fileBuffer);
-        count +=re;
+    if (bytesRead % MAXPAYLOAD != 0) {
+        sendPacket(bytesRead, fileBuffer);
+        count +=bytesRead;
         while (count > 0) {
             receiveACK();
         }
     }
-
+    
     // stop changing cwnd
     startData = 0;
-
+    
     Header fin;
-	 startSeq +=1;
-        if (startSeq == 25600) {
-            fin.seqNum = startSeq;
-            startSeq = 0;
-        } else if (startSeq > 25600) {
-            startSeq = 0;
-            fin.seqNum = startSeq;
-        } else {
-            fin.seqNum = startSeq;
-        }
-
+    startSeq +=1;
+    if (startSeq == 25600) {
+        fin.seqNum = startSeq;
+        startSeq = 0;
+    } else if (startSeq > 25600) {
+        startSeq = 0;
+        fin.seqNum = startSeq;
+    } else {
+        fin.seqNum = startSeq;
+    }
+    
     fin.seqNum = startSeq;
     fin.ackNum = 0;
     setBufACK(fin.buf, FIN);
@@ -358,19 +347,19 @@ int main(int argc, char *argv[]) {
     finTime = 1;
     receiveACK();
     Header finAck;
-      startSeq +=1;
-        if (startSeq == 25600) {
-            finAck.seqNum = startSeq;
-            startSeq = 0;
-        } else if (startSeq > 25600) {
-            startSeq = 0;
-            finAck.seqNum = startSeq;
-        } else {
-            finAck.seqNum = startSeq;
-        }
-
+    startSeq +=1;
+    if (startSeq == 25600) {
+        finAck.seqNum = startSeq;
+        startSeq = 0;
+    } else if (startSeq > 25600) {
+        startSeq = 0;
+        finAck.seqNum = startSeq;
+    } else {
+        finAck.seqNum = startSeq;
+    }
+    
     finAck.seqNum = startSeq;
-
+    
     finAck.ackNum = recSeqNum + 1;
     setBufACK(finAck.buf, ACK);
     finAck.padding = 0;
@@ -381,8 +370,8 @@ int main(int argc, char *argv[]) {
     char* sTypeFinAck = ackType(finAck.buf);
     printf( "SEND %d %d %d %d %s\n", finAck.seqNum, finAck.ackNum,
            cwnd, ssthresh, sTypeFinAck);
-
-
+    
+    
     fclose(content);
     close(sockfd);
     return 0;
