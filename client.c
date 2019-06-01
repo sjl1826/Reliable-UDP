@@ -346,8 +346,9 @@ int main(int argc, char *argv[]) {
         int received = 0;
         if(count >= cwnd || ( cwnd - count < 512  )) {
             currentTimerNum = window[received].h.seqNum + 1;
+            char *p = (char * ) &window[received];
             while (count > 0) {
-                receiveACK(window[received]);
+                receiveACK(p, 0);
                 
             }
             index = 0;
@@ -359,11 +360,12 @@ int main(int argc, char *argv[]) {
     // doesn't divide evenly
     received = 0;
     if (bytesRead % MAXPAYLOAD != 0) {
-        sendPacket(bytesRead, fileBuffer);
+        sendPacket(bytesRead, fileBuffer, index);
         count +=bytesRead;
         while (count > 0) {
+            char *p = (char * ) &window[received];
             currentTimerNum = window[received].h.seqNum + 1;
-            receiveACK(window[received]);
+            receiveACK(p, 0);
         }
         
     }
