@@ -140,8 +140,9 @@ void initiateFINProcess(int sockfd, const struct sockaddr * cliaddr, int len, in
 	printf("RECV %hu %hu %d %d %s\n", (*receivedACK).seqNum, (*receivedACK).ackNum, 0, 0, receivedACKType);
 }
 
-void initiateBuffer(int sockfd, const struct sockaddr * cliaddr, int len, int expectedSEQ, int isFirstPacket) {
+unsigned short initiateBuffer(int sockfd, const struct sockaddr * cliaddr, int len, int expectedSEQ, int isFirstPacket, int seqNum) {
 	int waitTime = 0;
+	int buffPos = 0;
 	char buffer[MAXLINE];
 	while(1) {
 		int new_socket = 0;
@@ -174,12 +175,37 @@ void initiateBuffer(int sockfd, const struct sockaddr * cliaddr, int len, int ex
 		}
 
 		if((*receivedPacket).h.seqNum == expectedSEQ) {
+			if(currentFile != NULL)
+				fprintf(currentFile, "%s", (*receivedPacket).payload);
+			for(int i = 0; i < bufPos; i++) {
+				fprintf(currentFile, "%s", packetBuff[bufPos].payload);
+			}
+			Header new_ack;
+			new_ack.seqNum = seqNum;
+			new_ack.ackNum = packetBuff[bufPos-1].ackNum + 1;
+			setBufACK(new_ack.buf, ACK);
+			bufPos = 0;
+			char* stype = ackType(new_ack.buf);
+			sendto(sockfd, (const char *)&new_ack, 12, 
+				MSG_CONFIRM, (const struct sockaddr *) &cliaddr, 
+		       	len);
+			printf("SEND %hu %hu %d %d %s\n", new_ack.seqNum, new_ack.ackNum, 0, 0, stype);
+			return new_ack.ackNum;
 			// Stop buffering, add payload to the file and add everything in buffer to file
 			// Send ACK with new ack
-		} else {
-
+		} else if(bufPos < 40) {
+			packetBuff[bufPos] = *receivedPacket;
+			Header ackHead;
+			ackHead.seqNum = seqNum;
+			ackHead.ackNum = expectedSEQ;
+			setBufACK(ackHead.buf, ACK);
+			bufPos+=1;
+			char* stype = ackType(ackHead.buf);
+			sendto(sockfd, (const char *)&ackHead, 12, 
+				MSG_CONFIRM, (const struct sockaddr *) &cliaddr, 
+		       	len);
+			printf("SEND %hu %hu %d %d %s\n", ackHead.seqNum, ackHead.ackNum, 0, 0, stype);
 		}
-
 	}
 }
 
@@ -265,7 +291,8 @@ int main(int argc, char *argv[]) {
 		Header ackHead;
 		unsigned short newACKNum = (*receivedHead).seqNum;
 		if(isFirstPacket == 0 && newACKNum != prevACKNum) {
-			//Initiate Buffer process
+			prevACKNum = initiateBuffer(sockfd, (const struct sockaddr *) &cliaddr, len, prevACKNum, isFirstPacket, seqNum);
+			continue;
 		}
 
 		ackHead.ackNum = (newACKNum >= 25600) ? 1 : newACKNum + 1;
