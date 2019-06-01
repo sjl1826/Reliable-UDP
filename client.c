@@ -65,7 +65,7 @@ typedef struct Packet {
 // CongestionControl vars
 Packet window[40];
 int currentTimerNum;
-float timer;
+double timer;
 int received;
 
 
@@ -82,7 +82,7 @@ void  timeNow() {
     struct timespec x;
     clock_gettime(CLOCK_REALTIME, &x);
     current.tv_sec = x.tv_sec;
-    current.tv_usec = x.tv_nsec / 1000;
+    current.tv_usec = x.tv_nsec / 1000.0;
     
 }
 
@@ -131,7 +131,7 @@ void setBufACK(char* buf, int num) {
 
 void resendThing(char* thing, int size) {
     char* sType;
-    char* dup = "DUP\0"
+    char* dup = "DUP\0";
     sendto(sockfd, (const char *)thing, size,
            MSG_CONFIRM, (const struct sockaddr *) &servaddr,
            sizeof(servaddr));
@@ -157,8 +157,8 @@ void receiveACK(char* resend, int head) {
                      &len);
         // this handles the header packets
         if (resend != NULL && head == 1) {
-            float currentTime = current.tv_sec + current.tv_usec;
-            printf("%.3f, %.3f",currentTime, timer);
+            double currentTime = current.tv_sec + (current.tv_usec /1000000.0);
+//            printf("%.3f, %.3f\n",currentTime, timer);
             if (currentTime > timer) {
                 resendThing(resend, 12);
                 timer = currentTime + 0.5;
@@ -198,7 +198,7 @@ void receiveACK(char* resend, int head) {
     timeNow();
     waitTime = current.tv_sec + 10;
     if (recAckNum > currentTimerNum) {
-    timer = current.tv_sec + current.tv_usec + 0.5;
+    timer = current.tv_sec + current.tv_usec/1000000.0 + 0.5;
     }
     
 }
@@ -330,7 +330,10 @@ int main(int argc, char *argv[]) {
     //wait for syn+ack or abort
     timeNow();
     waitTime = current.tv_sec + 10;
-    timer = current.tv_sec + current.tv_usec + 0.5;
+	double diff = current.tv_usec/1000000.0 + 0.5;
+	double sec = current.tv_sec * 1.0;
+	timer = sec + diff; 
+	fprintf(stderr, " %.3f, %.3f, %.3f,  %lu\n", timer, diff, sec,current.tv_sec);
     currentTimerNum = startSeq + 1;
     receiveACK(firstPacket, 1);
     
