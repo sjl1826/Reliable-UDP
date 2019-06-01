@@ -22,6 +22,7 @@
 
 struct timeval current;
 FILE* currentFile;
+struct Packet packetBuff[40];
 
 void timeNow() {
 	struct timespec x;
@@ -139,6 +140,49 @@ void initiateFINProcess(int sockfd, const struct sockaddr * cliaddr, int len, in
 	printf("RECV %hu %hu %d %d %s\n", (*receivedACK).seqNum, (*receivedACK).ackNum, 0, 0, receivedACKType);
 }
 
+void initiateBuffer(int sockfd, const struct sockaddr * cliaddr, int len, int expectedSEQ, int isFirstPacket) {
+	int waitTime = 0;
+	char buffer[MAXLINE];
+	while(1) {
+		int new_socket = 0;
+		timeNow();
+		waitTime = current.tv_sec + 10;
+		while (new_socket <= 0 && current.tv_sec < waitTime) {
+			new_socket = recvfrom(sockfd, (char *)buffer, MAXLINE, MSG_DONTWAIT, (struct sockaddr *)&cliaddr, &len);
+			timeNow();
+		}
+
+		if(new_socket < 0 && isFirstPacket == 0) {
+			initiateFINProcess(sockfd, (const struct sockaddr *)&cliaddr, len, seqNum, 0);
+			isFirstPacket = 1;
+			continue;
+		} else if (new_socket < 0) {
+			perror("ERROR in recvfrom");
+			close(sockfd);
+			exit(EXIT_FAILURE);
+		}
+
+		buffer[new_socket] = '\0';
+		Header *receivedHead = (Header *)buffer;
+		(*receivedHead).buf[3] = '\0';
+		char *rtype = ackType((*receivedHead).buf);
+		Packet *receivedPacket;
+		int packetReceivedFlag = 0;
+		if(strcmp(rtype, "") == 0) {
+			receivedPacket = (Packet *)buffer;
+			packetReceivedFlag = 1;
+		}
+
+		if((*receivedPacket).h.seqNum == expectedSEQ) {
+			// Stop buffering, add payload to the file and add everything in buffer to file
+			// Send ACK with new ack
+		} else {
+
+		}
+
+	}
+}
+
 int main(int argc, char *argv[]) {
 	if(argc < 2) {
 		fprintf(stderr, "ERROR: Not enough arguments");
@@ -178,6 +222,7 @@ int main(int argc, char *argv[]) {
 	unsigned long waitTime = 0;
 	unsigned long dataWaitTime = 0;
 
+	unsigned short prevACKNum = 0;
 	int finFlag = 0;
 	int numConnections = 0;
 	int isFirstPacket = 1;
@@ -204,17 +249,14 @@ int main(int argc, char *argv[]) {
 			close(sockfd);
 			exit(EXIT_FAILURE);
 		}
-		timeNow();
-		if(dataWaitTime != 0 && current.tv_sec > dataWaitTime) {
-			//Start the FIN process to close the connection
-		}
+
 		buffer[new_socket] = '\0';
 		Header *receivedHead = (Header *) buffer;
 		(*receivedHead).buf[3] = '\0';
 		char* rtype = ackType((*receivedHead).buf);
 		Packet *receivedPacket;
 		int packetReceivedFlag = 0;
-		if(strcmp(rtype, "") == 0) {
+		if(strcmp(rtype, "") == 0 || strcmp(rtype, "ACK") == 0) {
 			receivedPacket = (Packet *) buffer;
 			packetReceivedFlag = 1;
 		}
@@ -222,7 +264,12 @@ int main(int argc, char *argv[]) {
 
 		Header ackHead;
 		unsigned short newACKNum = (*receivedHead).seqNum;
+		if(isFirstPacket == 0 && newACKNum != prevACKNum) {
+			//Initiate Buffer process
+		}
+
 		ackHead.ackNum = (newACKNum >= 25600) ? 1 : newACKNum + 1;
+		prevACKNum = ackHead.ackNum;
 
 		if(strcmp(rtype, "SYN") == 0) {
 			setBufACK(ackHead.buf, SYNACK);
@@ -237,14 +284,16 @@ int main(int argc, char *argv[]) {
 			}
 		} else if(packetReceivedFlag == 1) {
 			setBufACK(ackHead.buf, ACK);
+			if(strcmp(rtype, "ACK") == 0) {
+				if(seqNum >= 25600) seqNum = 0;
+				seqNum += 1;
+			}
 			if(currentFile != NULL)
 				fprintf(currentFile, "%s", (*receivedPacket).payload);
 		} else if(strcmp(rtype, "FIN") == 0) {
 			finFlag = 1;
 			setBufACK(ackHead.buf, FINACK);
 		} else if(strcmp(rtype, "ACK") == 0) {
-			timeNow();
-			waitTime = current.tv_sec + 10;
 			if(seqNum >= 25600) seqNum = 0;
 			seqNum += 1;
 			continue;
