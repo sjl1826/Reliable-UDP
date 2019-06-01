@@ -158,7 +158,6 @@ void receiveACK(char* resend, int head) {
         // this handles the header packets
         if (resend != NULL && head == 1) {
             double currentTime = current.tv_sec + (current.tv_usec /1000000.0);
-//            printf("%.3f, %.3f\n",currentTime, timer);
             if (currentTime > timer) {
                 resendThing(resend, 12);
                 timer = currentTime + 0.5;
@@ -192,13 +191,9 @@ void receiveACK(char* resend, int head) {
                 cwnd = 10240;
             }
         }
-        received += 1;
         count -=512;
     }
-    timeNow();
-    waitTime = current.tv_sec + 10;
-    if (recAckNum > currentTimerNum) {
-    timer = current.tv_sec + current.tv_usec/1000000.0 + 0.5;
+    
     }
     
 }
@@ -341,36 +336,28 @@ int main(int argc, char *argv[]) {
     // start keeping track of cwnd
     startData = 1;
     bytesRead = fread(fileBuffer, 1, 512, content);
-    int index = 0;
     while(bytesRead == MAXPAYLOAD) {
         if((count + 512) <= cwnd) {
             sendPacket(bytesRead, fileBuffer, index);
             count += 512;
-            index +=1;
         }
-        int received = 0;
         if(count >= cwnd || ( cwnd - count < 512  )) {
-            currentTimerNum = window[received].h.seqNum + 1;
             char *p = (char * ) &window[received];
             while (count > 0) {
-                receiveACK(p, 0);
+                receiveACK(NULL, 0);
                 
             }
-            index = 0;
         }
         bytesRead = fread(fileBuffer, 1, 512, content);
         // printf("%d %d %d \n ", count, cwnd, bytesRead);
     }
     
     // doesn't divide evenly
-    received = 0;
     if (bytesRead % MAXPAYLOAD != 0) {
         sendPacket(bytesRead, fileBuffer, index);
         count +=bytesRead;
         while (count > 0) {
-            char *p = (char * ) &window[received];
-            currentTimerNum = window[received].h.seqNum + 1;
-            receiveACK(p, 0);
+            receiveACK(NULL, 0);
         }
         
     }
