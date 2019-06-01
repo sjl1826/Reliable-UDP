@@ -214,7 +214,8 @@ int main(int argc, char *argv[]) {
 		printf("RECV %hu %hu %d %d %s\n", (*receivedHead).seqNum, (*receivedHead).ackNum, 0, 0, rtype);
 
 		Header ackHead;
-		ackHead.ackNum = (*receivedHead).seqNum + 1;
+		unsigned short newACKNum = (*receivedHead).seqNum;
+		ackHead.ackNum = (newACKNum >= 25600) ? 1 : newACKNum + 1;
 
 		if(strcmp(rtype, "SYN") == 0) {
 			setBufACK(ackHead.buf, SYNACK);
