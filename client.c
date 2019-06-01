@@ -192,9 +192,9 @@ void receiveACK(char* resend, int head) {
             }
         }
         count -=512;
-    }
     
     }
+    
     
 }
 
@@ -338,7 +338,7 @@ int main(int argc, char *argv[]) {
     bytesRead = fread(fileBuffer, 1, 512, content);
     while(bytesRead == MAXPAYLOAD) {
         if((count + 512) <= cwnd) {
-            sendPacket(bytesRead, fileBuffer, index);
+            sendPacket(bytesRead, fileBuffer, 0);
             count += 512;
         }
         if(count >= cwnd || ( cwnd - count < 512  )) {
@@ -354,7 +354,7 @@ int main(int argc, char *argv[]) {
     
     // doesn't divide evenly
     if (bytesRead % MAXPAYLOAD != 0) {
-        sendPacket(bytesRead, fileBuffer, index);
+        sendPacket(bytesRead, fileBuffer, 0);
         count +=bytesRead;
         while (count > 0) {
             receiveACK(NULL, 0);
