@@ -131,20 +131,20 @@ void setBufACK(char* buf, int num) {
 
 void resendThing(char* thing, int size) {
     char* sType;
-    
+    char* dup = "DUP\0"
     sendto(sockfd, (const char *)thing, size,
            MSG_CONFIRM, (const struct sockaddr *) &servaddr,
            sizeof(servaddr));
     if (size > 12) {
         Packet* cast = (Packet *) thing;
         sType = ackType((*cast).h.buf);
-        printf( "SEND %d %d %d %d %s\n", (*cast).h.seqNum, (*cast).h.ackNum,
-               cwnd, ssthresh, sType);
+        printf( "SEND %d %d %d %d %s %s\n", (*cast).h.seqNum, (*cast).h.ackNum,
+               cwnd, ssthresh, sType, dup);
     } else {
         Header* cast = (Header *) thing;
         sType = ackType((*cast).buf);
-        printf( "SEND %d %d %d %d %s\n", (*cast).seqNum, (*cast).ackNum,
-               cwnd, ssthresh, sType);
+        printf( "SEND %d %d %d %d %s %s\n", (*cast).seqNum, (*cast).ackNum,
+               cwnd, ssthresh, sType, dup);
     }
     
 }
@@ -158,8 +158,10 @@ void receiveACK(char* resend, int head) {
         // this handles the header packets
         if (resend != NULL && head == 1) {
             float currentTime = current.tv_sec + current.tv_usec;
+            printf("%.3f, %.3f",currentTime, timer);
             if (currentTime > timer) {
                 resendThing(resend, 12);
+                timer = currentTime + 0.5;
                 cwnd = 512;
                 ssthresh = (1024 > cwnd/2) ? 1024 : cwnd/2;
             }
