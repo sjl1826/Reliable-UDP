@@ -182,7 +182,7 @@ unsigned short initiateBuffer(int sockfd, const struct sockaddr * cliaddr, int l
 			}
 			Header new_ack;
 			new_ack.seqNum = seqNum;
-			new_ack.ackNum = packetBuff[buffPos-1].ackNum + 1;
+			new_ack.ackNum = packetBuff[buffPos-1].h.ackNum + 1;
 			setBufACK(new_ack.buf, ACK);
 			buffPos = 0;
 			char* stype = ackType(new_ack.buf);
