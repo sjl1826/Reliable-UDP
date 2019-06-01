@@ -245,8 +245,9 @@ int main(int argc, char *argv[]) {
     fseek(content, 0, SEEK_SET);
     char* fileBuffer = 0;
     int bytesRead = 0;
-    fileBuffer = malloc(MAXPAYLOAD);
-
+    long size = ftell(content);
+    fileBuffer = malloc(size + 1);
+    filebBuffer[size] = '\0';
 	// start with random seqNum, send syn
 	startSeq = randomSeq();
 	int ackNum = 0;
@@ -287,31 +288,40 @@ int main(int argc, char *argv[]) {
                 cwnd, ssthresh, sTypeAck); 
     // start keeping track of cwnd
 	startData = 1;
-	bytesRead = fread(fileBuffer, 1, 512, content);  
-	int count1 = 0;
-	int count2 =0;
-	while(bytesRead == MAXPAYLOAD) {
+	//bytesRead = fread(fileBuffer, 1, 512, content);  
+    char p[512];
+    long counter = size / 512;
+    long re = size % 512; 
+    long until = 0; 
+   	memset(p, 0, MAXPAYLOAD);
+	strncpy(p, fileBuffer, 512);
+	while( until != counter ) {
 		if((count + 512) <= cwnd) {
-			sendPacket(bytesRead, fileBuffer);
+			sendPacket(512, p);
             count += 512;
-		count1+=1;
+            until+=1;
+            if (until <=counter) {
+            memset(p, 0, MAXPAYLOAD);
+	        strncpy(p, fileBuffer+(until*512), 512); 
+            }
 	  	}
 	 	if(count >= cwnd || ( cwnd - count < 512  )) {
 			while (count > 0) {
 			receiveACK();
-			count2 +=1; 
 		//	printf( "%d %d %d\n", count, count1, count2);
 
           }
 		}
-	   bytesRead = fread(fileBuffer, 1, 512, content);
+	//   bytesRead = fread(fileBuffer, 1, 512, content);
 // printf("%d %d %d \n ", count, cwnd, bytesRead);
 	 }
 
     // doesn't divide evenly
-    if (bytesRead % MAXPAYLOAD != 0) {
-        sendPacket(bytesRead, fileBuffer);
-        count +=bytesRead;
+    if (re != 0) {
+        memset(p, 0, MAXPAYLOAD);
+        strncpy(p, fileBuffer+(until*512), re); 
+        sendPacket(512, fileBuffer);
+        count +=re;
         while (count > 0) {
             receiveACK();
         }
