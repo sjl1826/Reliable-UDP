@@ -155,11 +155,11 @@ void receiveACK(char* resend, int head) {
         n = recvfrom(sockfd, (char *)buffer, MAXLINE,
                      MSG_DONTWAIT, (struct sockaddr *) &servaddr,
                      &len);
+        // this handles the header packets
         if (resend != NULL && head == 1) {
-            float current = current.tv_sec + current.tv_usec;
-            if (current > timer) {
-                resendThing(resend);
-                timer = current + 0.5;
+            float currentTime = current.tv_sec + current.tv_usec;
+            if (currentTime > timer) {
+                resendThing(resend, 12);
                 cwnd = 512;
                 ssthresh = (1024 > cwnd/2) ? 1024 : cwnd/2;
             }
