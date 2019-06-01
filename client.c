@@ -172,7 +172,7 @@ void sendPacket(int bytesRead, char* fileBuffer) {
                 head.seqNum = startSeq;
                 startSeq = 0;
             } else if (startSeq > 25600){
-                startSeq = 0;
+                startSeq = startSeq % 25600;
                 head.seqNum = startSeq;
             } else {
                 head.seqNum = startSeq;
@@ -300,7 +300,7 @@ int main(int argc, char *argv[]) {
 			while (count > 0) {
 			receiveACK();
 			count2 +=1; 
-			printf( "%d %d %d\n", count, count1, count2);
+		//	printf( "%d %d %d\n", count, count1, count2);
 
           }
 		}
