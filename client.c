@@ -129,7 +129,7 @@ void setBufACK(char* buf, int num) {
     buf[3] = '\0';
 }
 
-void resend(char* thing, int size) {
+void resendThing(char* thing, int size) {
     char* sType;
     
     sendto(sockfd, (const char *)thing, size,
@@ -142,8 +142,8 @@ void resend(char* thing, int size) {
                cwnd, ssthresh, sType);
     } else {
         Header* cast = (Header *) thing;
-        sType = ackType((*cast).h.buf);
-        printf( "SEND %d %d %d %d %s\n", (*cast).h.seqNum, (*cast).h.ackNum,
+        sType = ackType((*cast).buf);
+        printf( "SEND %d %d %d %d %s\n", (*cast).seqNum, (*cast).ackNum,
                cwnd, ssthresh, sType);
     }
     
@@ -158,7 +158,7 @@ void receiveACK(char* resend, int head) {
         if (resend != NULL && head == 1) {
             float current = current.tv_sec + current.tv_usec;
             if (current > timer) {
-                resend(resend);
+                resendThing(resend);
                 timer = current + 0.5;
                 cwnd = 512;
                 ssthresh = (1024 > cwnd/2) ? 1024 : cwnd/2;
@@ -217,15 +217,15 @@ void sendPacket(int bytesRead, char* fileBuffer, int index) {
             setBufACK(head.buf, 0);
             startSeq +=1;
             if (startSeq == 25600) {
-                ackHead.seqNum = startSeq;
+                head.seqNum = startSeq;
                 startSeq = 0;
             } else if (startSeq > 25600) {
                 startSeq = 0;
-                ackHead.seqNum = startSeq;
+                head.seqNum = startSeq;
             } else {
-                ackHead.seqNum = startSeq;
+                head.seqNum = startSeq;
             }
-            ackHead.ackNum = (recSeqNum == 25600) ? 0 : recSeqNum + 1;
+            head.ackNum = (recSeqNum == 25600) ? 0 : recSeqNum + 1;
             acked = 1;
         }
         else {
@@ -322,7 +322,7 @@ int main(int argc, char *argv[]) {
     sendto(sockfd, (const char *)firstPacket, 12,
            MSG_CONFIRM, (const struct sockaddr *) &servaddr,
            sizeof(servaddr));
-    char* sType = ackType(firstH.buf, 1);
+    char* sType = ackType(firstH.buf);
     printf( "SEND %d %d %d %d %s\n", firstH.seqNum, firstH.ackNum,
            cwnd, ssthresh, sType);
     //wait for syn+ack or abort
@@ -330,7 +330,7 @@ int main(int argc, char *argv[]) {
     waitTime = current.tv_sec + 10;
     timer = current.tv_sec + current.tv_usec + 0.5;
     currentTimerNum = startSeq + 1;
-    receiveACK(firstPacket);
+    receiveACK(firstPacket, 1);
     
     
     // start keeping track of cwnd
