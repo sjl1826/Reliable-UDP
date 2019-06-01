@@ -177,14 +177,14 @@ unsigned short initiateBuffer(int sockfd, const struct sockaddr * cliaddr, int l
 		if((*receivedPacket).h.seqNum == expectedSEQ) {
 			if(currentFile != NULL)
 				fprintf(currentFile, "%s", (*receivedPacket).payload);
-			for(int i = 0; i < bufPos; i++) {
-				fprintf(currentFile, "%s", packetBuff[bufPos].payload);
+			for(int i = 0; i < buffPos; i++) {
+				fprintf(currentFile, "%s", packetBuff[buffPos].payload);
 			}
 			Header new_ack;
 			new_ack.seqNum = seqNum;
-			new_ack.ackNum = packetBuff[bufPos-1].ackNum + 1;
+			new_ack.ackNum = packetBuff[buffPos-1].ackNum + 1;
 			setBufACK(new_ack.buf, ACK);
-			bufPos = 0;
+			buffPos = 0;
 			char* stype = ackType(new_ack.buf);
 			sendto(sockfd, (const char *)&new_ack, 12, 
 				MSG_CONFIRM, (const struct sockaddr *) &cliaddr, 
@@ -193,13 +193,13 @@ unsigned short initiateBuffer(int sockfd, const struct sockaddr * cliaddr, int l
 			return new_ack.ackNum;
 			// Stop buffering, add payload to the file and add everything in buffer to file
 			// Send ACK with new ack
-		} else if(bufPos < 40) {
-			packetBuff[bufPos] = *receivedPacket;
+		} else if(buffPos < 40) {
+			packetBuff[buffPos] = *receivedPacket;
 			Header ackHead;
 			ackHead.seqNum = seqNum;
 			ackHead.ackNum = expectedSEQ;
 			setBufACK(ackHead.buf, ACK);
-			bufPos+=1;
+			buffPos+=1;
 			char* stype = ackType(ackHead.buf);
 			sendto(sockfd, (const char *)&ackHead, 12, 
 				MSG_CONFIRM, (const struct sockaddr *) &cliaddr, 
