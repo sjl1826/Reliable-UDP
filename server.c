@@ -22,7 +22,6 @@
 
 struct timeval current;
 FILE* currentFile;
-struct Packet packetBuff[40];
 
 void timeNow() {
 	struct timespec x;
@@ -42,6 +41,7 @@ typedef struct Packet {
     Header h;
     char payload[512];
 } Packet;
+struct Packet packetBuff[40];
 
 void signalHandler(int sig) {
 	if(sig == SIGQUIT || sig == SIGTERM) {
