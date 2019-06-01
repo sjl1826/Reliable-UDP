@@ -86,25 +86,6 @@ void  timeNow() {
     
 }
 
-void resend(char* thing, int size) {
-    char* sType;
-    
-    sendto(sockfd, (const char *)thing, size,
-           MSG_CONFIRM, (const struct sockaddr *) &servaddr,
-           sizeof(servaddr));
-    if (size > 12) {
-        Packet* cast = (Packet *) thing;
-        sType = ackType((*cast).h.buf);
-        printf( "SEND %d %d %d %d %s\n", (*cast).h.seqNum, (*cast).h.ackNum,
-               cwnd, ssthresh, sType);
-    } else {
-        Header* cast = (Header *) thing;
-        sType = ackType((*cast).h.buf);
-        printf( "SEND %d %d %d %d %s\n", (*cast).h.seqNum, (*cast).h.ackNum,
-               cwnd, ssthresh, sType);
-    }
-    
-}
 
 char* ackType(const char buf[]) {
     char* type;
@@ -146,6 +127,26 @@ void setBufACK(char* buf, int num) {
             break;
     }
     buf[3] = '\0';
+}
+
+void resend(char* thing, int size) {
+    char* sType;
+    
+    sendto(sockfd, (const char *)thing, size,
+           MSG_CONFIRM, (const struct sockaddr *) &servaddr,
+           sizeof(servaddr));
+    if (size > 12) {
+        Packet* cast = (Packet *) thing;
+        sType = ackType((*cast).h.buf);
+        printf( "SEND %d %d %d %d %s\n", (*cast).h.seqNum, (*cast).h.ackNum,
+               cwnd, ssthresh, sType);
+    } else {
+        Header* cast = (Header *) thing;
+        sType = ackType((*cast).h.buf);
+        printf( "SEND %d %d %d %d %s\n", (*cast).h.seqNum, (*cast).h.ackNum,
+               cwnd, ssthresh, sType);
+    }
+    
 }
 
 void receiveACK(char* resend, int head) {
