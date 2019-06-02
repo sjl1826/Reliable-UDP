@@ -70,7 +70,7 @@ int ind;
 int timedOut = 0;
 
 //function prototypes
-void receiveACK(char* resend, int head);
+void receiveACK(char* resend, int head, int size);
 void timeNow();
 void setBufACK(char* buf, int num);
 char* ackType(const char buf[]);
@@ -97,8 +97,8 @@ void resendThing(char* thing, int size) {
         sType = ackType((*cast).h.buf);
         printf( "SEND %d %d %d %d %s %s\n", (*cast).h.seqNum, (*cast).h.ackNum,
                cwnd, ssthresh, sType, dup);
-        receiveACK(thing, size);
-        if(recAckNum < (*cast).seqNum + 512) {
+        receiveACK(thing, 0, size);
+        if(recAckNum < (*cast).h.seqNum + 512) {
             resendThing(thing, size);
         }
     } else {
@@ -107,7 +107,7 @@ void resendThing(char* thing, int size) {
         sType = ackType((*cast).buf);
         printf( "SEND %d %d %d %d %s %s\n", (*cast).seqNum, (*cast).ackNum,
                cwnd, ssthresh, sType, dup);
-        receiveACK(thing, size);
+        receiveACK(thing, 1, size);
         if(recAckNum != (*cast).seqNum +1) {
             resendThing(thing, size);
         }
@@ -117,13 +117,13 @@ void resendThing(char* thing, int size) {
     
 }
 
-void handleTimeOut() {
+void handleTimeOut(int size) {
     
     for (int i =0; i < ind ; i++) {
         if (!window[i].h.padding) {
             if (window[i].h.seqNum == currentTimerNum){
-                char* thing = (char *) window[i];
-                resendThing(thing);
+                char* thing = (char *)&window[i];
+                resendThing(thing,size);
                 timedOut = 0;
                 return;
             }
@@ -133,7 +133,7 @@ void handleTimeOut() {
     }
 }
 
-void receiveACK(char* resend, int head) {
+void receiveACK(char* resend, int head, int size) {
 
     int n = 0;
     while (current.tv_sec <= waitTime && n <=0 ) {
@@ -141,7 +141,7 @@ void receiveACK(char* resend, int head) {
                      MSG_DONTWAIT, (struct sockaddr *) &servaddr,
                      &len);
         // this handles the header packets
-        if (resend != NULL && head == 1) {
+/*        if (resend != NULL && head == 1) {
             double currentTime = current.tv_sec + (current.tv_usec /1000000.0);
             if (currentTime > timer) {
                 resendThing(resend, 12);
@@ -156,12 +156,12 @@ void receiveACK(char* resend, int head) {
                 for (int i =0; i < ind ; i++) {
                     if (!window[i].h.padding) {
                         currentTimerNum = window[i].h.seqNum;
-                        timedOut = 1;
+                        handleTimeOut(512);
                         return;
                     }
                 }
             }
-        }
+        } */
         timeNow();
     }
     if ( n <= 0 ) {
@@ -181,16 +181,16 @@ void receiveACK(char* resend, int head) {
     // ACK the packet
     if (head == 0 ) {
         int ackOnce = 0;
-        for (int i =0; i < ind ; i++) {
-            int expected = window[i].h.seqNum + 512;
-            if (recAckNum >= expected) {
+        for (int i = 0; i < ind ; i++) {
+            int expected = window[i].h.seqNum + size;
+            if (recAckNum >= expected && window[i].h.padding == 0) {
                 window[i].h.padding = 1;
-                currentTimerNum = window[i].h.seqNum + 512;
+                currentTimerNum = window[i].h.seqNum + size;
                 timeNow();
                 double diff = current.tv_usec/1000000.0 + 0.5;
                 double sec = current.tv_sec * 1.0;
                 timer = sec + diff;
-                count -=512;
+		count -=512;
                 if (startData && !ackOnce) {
                     ackOnce = 1;
                     if (cwnd < ssthresh)
@@ -264,7 +264,6 @@ void sendPacket(int bytesRead, char* fileBuffer) {
     char* sType = ackType(head.buf);
     printf( "SEND %d %d %d %d %s\n", head.seqNum, head.ackNum,
            cwnd, ssthresh, sType);
-	printf("%d\n", ind);
     window[ind] = pack;
     ind+=1;
     
@@ -340,16 +339,15 @@ int main(int argc, char *argv[]) {
 	double sec = current.tv_sec * 1.0;
 	timer = sec + diff;
     currentTimerNum = startSeq + 1;
-    receiveACK(firstPacket, 1);
+    receiveACK(firstPacket, 1, 12);
     
     
     // start keeping track of cwnd
     startData = 1;
     ind = 0;
-    received = 0;
     bytesRead = fread(fileBuffer, 1, 512, content);
     while(bytesRead == MAXPAYLOAD) {
-        if((count + 512) <= cwnd) {
+	 if((count + 512) <= cwnd) {
             sendPacket(bytesRead, fileBuffer);
             count += 512;
         }
@@ -361,11 +359,7 @@ int main(int argc, char *argv[]) {
             while (count > 0) {
                 timeNow();
                 waitTime = current.tv_sec + 10;
-                receiveACK(NULL, 0);
-                if (timedOut) {
-                    handleTimeOut();
-                }
-                
+                receiveACK(NULL, 0, 512);
             }
             // this means we got everything, move on to next thing
             memset(&window,0, sizeof(window));
@@ -386,11 +380,10 @@ int main(int argc, char *argv[]) {
         while (count > 0) {
             timeNow();
             waitTime = current.tv_sec + 10;
-            receiveACK(NULL, 0);
-            if (timedOut) {
-                handleTimeOut();
-            }
-            
+	    int read = 512;
+	    if (count < 512) 
+		read = bytesRead;
+            receiveACK(NULL, 0, read);
         }
     }
 
@@ -426,11 +419,11 @@ int main(int argc, char *argv[]) {
            cwnd, ssthresh, sTypeFin);
     timeNow();
     waitTime = current.tv_sec + 10;
-    timer = current.tv_sec + current.tv_usec + 0.5;
-    receiveACK(finH, 1);
+    timer = current.tv_sec + current.tv_usec/1000000.0 + 0.5;
+    receiveACK(finH, 1,12);
     // for 2 seconds from server
     finTime = 1;
-    receiveACK(NULL, 1);
+    receiveACK(NULL, 1,12);
     Header finAck;
     startSeq +=1;
     if (startSeq == 25600) {
