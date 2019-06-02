@@ -158,9 +158,7 @@ unsigned short initiateBuffer(int sockfd, const struct sockaddr * cliaddr, int l
 			isFirstPacket = 1;
 			continue;
 		} else if (new_socket < 0) {
-			perror("ERROR in recvfrom");
-			close(sockfd);
-			exit(EXIT_FAILURE);
+			continue;
 		}
 
 		buffer[new_socket] = '\0';
@@ -271,9 +269,7 @@ int main(int argc, char *argv[]) {
 		  isFirstPacket = 1;
 		  continue;
 		} else if(new_socket < 0) {
-			perror("ERROR in recvfrom");
-			close(sockfd);
-			exit(EXIT_FAILURE);
+			continue;
 		}
 
 		buffer[new_socket] = '\0';
