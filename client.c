@@ -227,7 +227,7 @@ void sendPacket(int bytesRead, char* fileBuffer, int index) {
         }
         else {
             head.padding = 0;
-            startSeq+=bytesRead;
+            startSeq+=512;
             if (startSeq == 25600) {
                 head.seqNum = startSeq;
                 startSeq = 0;
@@ -361,12 +361,11 @@ int main(int argc, char *argv[]) {
         }
         
     }
-    
+    startSeq = startSeq + bytesRead;
     // stop changing cwnd
     startData = 0;
     
     Header fin;
-    startSeq +=1;
     if (startSeq == 25600) {
         fin.seqNum = startSeq;
         startSeq = 0;
