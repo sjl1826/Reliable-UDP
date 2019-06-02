@@ -67,8 +67,10 @@ Packet window[20];
 int currentTimerNum;
 double timer;
 int received;
-int index;
+int ind;
 int timedOut = 0;
+
+void receiveACK(char* resend, int head);
 
 int randomSeq() {
     srand(time(NULL));
@@ -169,7 +171,7 @@ void handleTimeOut() {
     }
     
     memset(&window,0, sizeof(window)); */
-    index = 0;
+    ind = 0;
 }
 
 void receiveACK(char* resend, int head) {
@@ -223,7 +225,7 @@ void receiveACK(char* resend, int head) {
         int expected = window[i].h.seqNum + 512;
         if (recAckNum >= expected) {
             window[i].h.padding = 1;
-            currentTimerNum = window[i].seqNum + 512;
+            currentTimerNum = window[i].h.seqNum + 512;
             timeNow();
             double diff = current.tv_usec/1000000.0 + 0.5;
             double sec = current.tv_sec * 1.0;
@@ -247,7 +249,7 @@ void receiveACK(char* resend, int head) {
     
 }
 
-void sendPacket(int bytesRead, char* fileBuffer, int index) {
+void sendPacket(int bytesRead, char* fileBuffer) {
     Packet pack;
     Header head;
     if (startSeq > 25600) {
@@ -303,8 +305,9 @@ void sendPacket(int bytesRead, char* fileBuffer, int index) {
     char* sType = ackType(head.buf);
     printf( "SEND %d %d %d %d %s\n", head.seqNum, head.ackNum,
            cwnd, ssthresh, sType);
-    window[index] = pack;
-    index+=1;
+	printf("%d\n", ind);
+    //window[ind] = pack;
+    ind+=1;
     
 }
 
@@ -384,12 +387,12 @@ int main(int argc, char *argv[]) {
     
     // start keeping track of cwnd
     startData = 1;
-    index = 0;
+    ind = 0;
     received = 0;
     bytesRead = fread(fileBuffer, 1, 512, content);
     while(bytesRead == MAXPAYLOAD) {
         if((count + 512) <= cwnd) {
-            sendPacket(bytesRead, fileBuffer, index);
+            sendPacket(bytesRead, fileBuffer);
             count += 512;
         }
         if(count >= cwnd || ( cwnd - count < 512  )) {
@@ -406,6 +409,7 @@ int main(int argc, char *argv[]) {
                 }
                 
             }
+		ind = 0;
         }
         bytesRead = fread(fileBuffer, 1, 512, content);
         // printf("%d %d %d \n ", count, cwnd, bytesRead);
@@ -413,12 +417,12 @@ int main(int argc, char *argv[]) {
     
     // doesn't divide evenly
     if (bytesRead % MAXPAYLOAD != 0) {
-        sendPacket(bytesRead, fileBuffer, index);
+        sendPacket(bytesRead, fileBuffer);
         count +=bytesRead;
         while (count > 0) {
             receiveACK(NULL, 0);
         }
-        
+        ind = 0;
     }
     startSeq = startSeq + bytesRead;
     // stop changing cwnd
