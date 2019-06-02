@@ -89,7 +89,6 @@ int checkCount() {
 int findIndexOfAck(int ack) {
 	int i;
     for (i=0; i < ind; i+=1) {
-//        printf("%d %d\n", window[i].h.seqNum, ack);
 	if (window[i].h.seqNum == ack)
             break;
     }
@@ -102,7 +101,12 @@ void resendThing(char* thing, int size) {
     sendto(sockfd, (const char *)thing, size,
            MSG_CONFIRM, (const struct sockaddr *) &servaddr,
            sizeof(servaddr));
+    timeNow();
+    double currentTime = current.tv_sec + (current.tv_usec /1000000.0);
+    timer = currentTime + 0.5;
     if (size > 12) {
+        cwnd = 512;
+        ssthresh = (1024 > cwnd/2) ? 1024 : cwnd/2;
         Packet* cast = (Packet *) thing;
         sType = ackType((*cast).h.buf);
         printf( "SEND %d %d %d %d %s %s\n", (*cast).h.seqNum, (*cast).h.ackNum,
@@ -143,6 +147,7 @@ void receiveACK(char* resend, int head, int size) {
 
     int n = 0;
     while (current.tv_sec <= waitTime && n <=0 ) {
+        timeNow();
         n = recvfrom(sockfd, (char *)buffer, MAXLINE,
                      MSG_DONTWAIT, (struct sockaddr *) &servaddr,
                      &len);
@@ -151,7 +156,6 @@ void receiveACK(char* resend, int head, int size) {
             double currentTime = current.tv_sec + (current.tv_usec /1000000.0);
             if (currentTime > timer) {
                 resendThing(resend, 12);
-                timer = currentTime + 0.5;
                 cwnd = 512;
                 ssthresh = (1024 > cwnd/2) ? 1024 : cwnd/2;
                 return;
@@ -167,7 +171,6 @@ void receiveACK(char* resend, int head, int size) {
                 }
             }
         }
-        timeNow();
     }
     if ( n <= 0 ) {
         fprintf(stderr, "no response");
@@ -330,9 +333,9 @@ int main(int argc, char *argv[]) {
         while (count > 0) {
             timeNow();
             waitTime = current.tv_sec + 10;
-	    int read = 512;
-	    if (count < 512) 
-		read = bytesRead;
+            int read = 512;
+            if (count < 512)
+                read = bytesRead;
             receiveACK(NULL, 0, read);
         }
     }
