@@ -182,14 +182,15 @@ void receiveACK(char* resend, int head, int size) {
     if (head == 0 ) {
         int ackOnce = 0;
         for (int i = 0; i < ind ; i++) {
-            int expected = window[i].h.seqNum + size;
+            int expected = window[i].h.seqNum +(window[i].h.seqNum + size > 25600) ? 25600 % (window[i].h.seqNum + 512) : size;
             if (recAckNum >= expected && window[i].h.padding == 0) {
                 window[i].h.padding = 1;
-                currentTimerNum = window[i].h.seqNum + size;
+                currentTimerNum = expected;
                 timeNow();
                 double diff = current.tv_usec/1000000.0 + 0.5;
                 double sec = current.tv_sec * 1.0;
                 timer = sec + diff;
+		printf("%d %d\n", window[i].h.seqNum + size, recAckNum);
 		count -=512;
                 if (startData && !ackOnce) {
                     ackOnce = 1;
@@ -360,6 +361,7 @@ int main(int argc, char *argv[]) {
                 timeNow();
                 waitTime = current.tv_sec + 10;
                 receiveACK(NULL, 0, 512);
+		printf("COUNT %d \n", count);
             }
             // this means we got everything, move on to next thing
             memset(&window,0, sizeof(window));
