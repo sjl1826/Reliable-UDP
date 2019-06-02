@@ -282,8 +282,10 @@ int main(int argc, char *argv[]) {
 		char* rtype = ackType((*receivedHead).buf);
 		Packet *receivedPacket;
 		int packetReceivedFlag = 0;
+		printf("HUH %s %s \n", rtype, (*receivedHead).buf);
 		if(strcmp(rtype, "") == 0 || strcmp(rtype, "ACK") == 0) {
 			receivedPacket = (Packet *) buffer;
+			printf("CAME %s %s \n", rtype, (*receivedHead).buf);
 			packetReceivedFlag = 1;
 		}
 		printf("RECV %hu %hu %d %d %s\n", (*receivedHead).seqNum, (*receivedHead).ackNum, 0, 0, rtype);
@@ -291,11 +293,13 @@ int main(int argc, char *argv[]) {
 		Header ackHead;
 		unsigned short newACKNum = (*receivedHead).seqNum;
 		if(isFirstPacket == 0 && newACKNum != prevACKNum) {
+			printf("INIT %d %d\n", newACKNum, prevACKNum);
+		
 			prevACKNum = initiateBuffer(sockfd, (const struct sockaddr *) &cliaddr, len, prevACKNum, isFirstPacket, seqNum);
 			continue;
 		}
 
-		ackHead.ackNum = (newACKNum >= 25600) ? 1 : newACKNum + 1;
+		ackHead.ackNum = (newACKNum >= 25600) ? 0 : newACKNum + 1;
 		prevACKNum = ackHead.ackNum;
 
 		if(strcmp(rtype, "SYN") == 0) {
@@ -319,10 +323,13 @@ int main(int argc, char *argv[]) {
 				fprintf(currentFile, "%s", (*receivedPacket).payload);
 		} else if(strcmp(rtype, "FIN") == 0) {
 			finFlag = 1;
+			printf("HERE\n");
 			setBufACK(ackHead.buf, FINACK);
 		} else if(strcmp(rtype, "ACK") == 0) {
 			if(seqNum >= 25600) seqNum = 0;
 			seqNum += 1;
+			printf("HERE132132\n");
+
 			continue;
 		}
 
