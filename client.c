@@ -124,12 +124,13 @@ void handleTimeOut() {
             if (window[i].h.seqNum == currentTimerNum){
                 char* thing = (char *) window[i];
                 resendThing(thing);
+                timedOut = 0;
+                return;
             }
                 
             
         }
     }
-    
 }
 
 void receiveACK(char* resend, int head) {
@@ -179,6 +180,7 @@ void receiveACK(char* resend, int head) {
            ssthresh, rType);
     // ACK the packet
     if (head == 0 ) {
+        int ackOnce = 0;
         for (int i =0; i < ind ; i++) {
             int expected = window[i].h.seqNum + 512;
             if (recAckNum >= expected) {
@@ -188,7 +190,9 @@ void receiveACK(char* resend, int head) {
                 double diff = current.tv_usec/1000000.0 + 0.5;
                 double sec = current.tv_sec * 1.0;
                 timer = sec + diff;
-                if (startData) {
+                count -=512;
+                if (startData && !ackOnce) {
+                    ackOnce = 1;
                     if (cwnd < ssthresh)
                         cwnd +=512;
                     else {
@@ -197,7 +201,6 @@ void receiveACK(char* resend, int head) {
                             cwnd = 10240;
                         }
                     }
-                count -=512;
                 }
             }
         }
