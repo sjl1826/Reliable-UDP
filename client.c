@@ -87,8 +87,10 @@ int checkCount() {
 }
 
 int findIndexOfAck(int ack) {
-    for (int i =0; i < ind ; i++) {
-        if (window[i].h.seqNum == ack)
+	int i;
+    for (i=0; i < ind; i+=1) {
+//        printf("%d %d\n", window[i].h.seqNum, ack);
+	if (window[i].h.seqNum == ack)
             break;
     }
     return i;
@@ -186,11 +188,10 @@ void receiveACK(char* resend, int head, int size) {
         int ackUpTo = 0;
         int ackOnce = 0;
         int i = 0;
-        if (recAckNum % 512 == 0 ) {
-            ackUpTo = findIndexOfAck(recAckNum - 512);
-        } else {
-            ackUpTo = findIndexOfAck(recAckNum % 512);
-        }
+	if (recAckNum >= 512)
+        	ackUpTo = findIndexOfAck(recAckNum - 512);
+	else 
+		ackUpTo = findIndexOfAck(25600 - (512 - recAckNum));
         for (i = 0 ; i <= ackUpTo; i++) {
             if (window[i].h.padding == 0) {
                 window[i].h.padding = 1;
