@@ -222,7 +222,14 @@ int main(int argc, char *argv[]) {
 
 		Header ackHead;
 		unsigned short newACKNum = (*receivedHead).seqNum;
-		ackHead.ackNum = (newACKNum >= 25600) ? 1 : newACKNum + 1;
+        if(new_socket > 12)
+        newACKNum+=new_socket-12;
+        if (newACKNum > 25600) {
+            newACKNum = newACKNum % 25600;
+        } else {
+            newACKNum = (newACKNum == 25600) ? 0 : newACKNum + 1;
+        }
+        ackHead.ackNum = newACKNum
 
 		if(strcmp(rtype, "SYN") == 0) {
 			setBufACK(ackHead.buf, SYNACK);
