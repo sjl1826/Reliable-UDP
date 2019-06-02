@@ -44,9 +44,6 @@ int finTime = 0;
 int startData = 0;
 int finNum = 0;
 
-
-
-
 char buffer[MAXLINE];
 
 typedef struct Header {
@@ -61,6 +58,8 @@ typedef struct Packet {
     char payload[MAXPAYLOAD];
 } Packet;
 
+struct timeval current;
+
 
 // CongestionControl vars
 Packet window[20];
@@ -70,66 +69,21 @@ int received;
 int ind;
 int timedOut = 0;
 
+//function prototypes
 void receiveACK(char* resend, int head);
-
-int randomSeq() {
-    srand(time(NULL));
-    int num = (rand() % (25600 + 1));
-    return num;
-}
-
-struct timeval current;
-
-void  timeNow() {
-    
-    struct timespec x;
-    clock_gettime(CLOCK_REALTIME, &x);
-    current.tv_sec = x.tv_sec;
-    current.tv_usec = x.tv_nsec / 1000.0;
-    
-}
+void timeNow();
+void setBufACK(char* buf, int num);
+char* ackType(const char buf[]);
+int randomSeq();
 
 
-char* ackType(const char buf[]) {
-    char* type;
-    if(strcmp(buf, "100") == 0) {
-        type = "ACK";
-    } else if(strcmp(buf, "010") == 0) {
-        type = "SYN";
-    } else if(strcmp(buf, "110") == 0) {
-        type = "ACK SYN";
-    } else if(strcmp(buf, "001") == 0) {
-        type = "FIN";
-    } else if(strcmp(buf, "101") == 0) {
-        type = "ACK FIN";
-    } else
-        type = "";
-    return type;
-}
-
-
-void setBufACK(char* buf, int num) {
-    switch(num) {
-        case ACK:
-            buf[0] = '1'; buf[1] = '0'; buf[2] = '0';
-            break;
-        case SYN:
-            buf[0] = '0'; buf[1] = '1'; buf[2] = '0';
-            break;
-        case SYNACK:
-            buf[0] = '1'; buf[1] = '1'; buf[2] = '0';
-            break;
-        case FIN:
-            buf[0] = '0'; buf[1] = '0'; buf[2] = '1';
-            break;
-        case FINACK:
-            buf[0] = '1'; buf[1] = '0'; buf[2] = '1';
-            break;
-        default:
-            buf[0] = '0'; buf[1] = '0'; buf[2] = '0';
-            break;
+int checkCount() {
+    int total = 0;
+    for (int i =0; i < ind ; i++) {
+        if (window[i].h.padding == 0)
+            total +=1;
     }
-    buf[3] = '\0';
+    return total;
 }
 
 void resendThing(char* thing, int size) {
@@ -143,6 +97,10 @@ void resendThing(char* thing, int size) {
         sType = ackType((*cast).h.buf);
         printf( "SEND %d %d %d %d %s %s\n", (*cast).h.seqNum, (*cast).h.ackNum,
                cwnd, ssthresh, sType, dup);
+        receiveACK(thing, size);
+        if(recAckNum < (*cast).seqNum + 512) {
+            resendThing(thing, size);
+        }
     } else {
         //resend until we get it
         Header* cast = (Header *) thing;
@@ -154,12 +112,14 @@ void resendThing(char* thing, int size) {
             resendThing(thing, size);
         }
     }
+    //this is how many packets left, we should receive for
+    count = checkCount() * 512;
     
 }
 
 void handleTimeOut() {
     
-  /*  for (int i =0; i < index ; i++) {
+    for (int i =0; i < ind ; i++) {
         if (!window[i].h.padding) {
             if (window[i].h.seqNum == currentTimerNum){
                 char* thing = (char *) window[i];
@@ -170,8 +130,6 @@ void handleTimeOut() {
         }
     }
     
-    memset(&window,0, sizeof(window)); */
-    ind = 0;
 }
 
 void receiveACK(char* resend, int head) {
@@ -194,7 +152,7 @@ void receiveACK(char* resend, int head) {
         } else if (head == 0 && n<=0) {
             double currentTime = current.tv_sec + (current.tv_usec /1000000.0);
             if (currentTime > timer) {
-                for (int i =0; i < cwnd / 512 ; i++) {
+                for (int i =0; i < ind ; i++) {
                     if (!window[i].h.padding) {
                         currentTimerNum = window[i].h.seqNum;
                         timedOut = 1;
@@ -221,31 +179,29 @@ void receiveACK(char* resend, int head) {
            ssthresh, rType);
     // ACK the packet
     if (head == 0 ) {
-    for (int i =0; i < cwnd / 512 ; i++) {
-        int expected = window[i].h.seqNum + 512;
-        if (recAckNum >= expected) {
-            window[i].h.padding = 1;
-            currentTimerNum = window[i].h.seqNum + 512;
-            timeNow();
-            double diff = current.tv_usec/1000000.0 + 0.5;
-            double sec = current.tv_sec * 1.0;
-            timer = sec + diff;
-        }
-    }
-    }
-    if (startData) {
-        if (cwnd < ssthresh)
-            cwnd +=512;
-        else {
-            cwnd += (512 * 512) / cwnd;
-            if (cwnd > 10240) {
-                cwnd = 10240;
+        for (int i =0; i < ind ; i++) {
+            int expected = window[i].h.seqNum + 512;
+            if (recAckNum >= expected) {
+                window[i].h.padding = 1;
+                currentTimerNum = window[i].h.seqNum + 512;
+                timeNow();
+                double diff = current.tv_usec/1000000.0 + 0.5;
+                double sec = current.tv_sec * 1.0;
+                timer = sec + diff;
+                if (startData) {
+                    if (cwnd < ssthresh)
+                        cwnd +=512;
+                    else {
+                        cwnd += (512 * 512) / cwnd;
+                        if (cwnd > 10240) {
+                            cwnd = 10240;
+                        }
+                    }
+                count -=512;
+                }
             }
         }
-        count -=512;
-    
     }
-    
     
 }
 
@@ -306,7 +262,7 @@ void sendPacket(int bytesRead, char* fileBuffer) {
     printf( "SEND %d %d %d %d %s\n", head.seqNum, head.ackNum,
            cwnd, ssthresh, sType);
 	printf("%d\n", ind);
-    //window[ind] = pack;
+    window[ind] = pack;
     ind+=1;
     
 }
@@ -330,8 +286,6 @@ int main(int argc, char *argv[]) {
         fprintf(stderr,"ERROR: invalid port num\n");
         exit(1);
     }
-    
-    
     // Creating socket file descriptor
     if ( (sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0 ) {
         perror("ERROR: socket creation failed");
@@ -342,7 +296,6 @@ int main(int argc, char *argv[]) {
         fprintf(stderr,"ERROR: no such host\n");
         exit(1);
     }
-    
     memset(&servaddr, 0, sizeof(servaddr));
     servaddr.sin_family = AF_INET;
     memcpy((char *)&servaddr.sin_addr.s_addr, (char *)server->h_addr,  server->h_length);
@@ -359,6 +312,8 @@ int main(int argc, char *argv[]) {
     char* fileBuffer = 0;
     int bytesRead = 0;
     fileBuffer = malloc(MAXPAYLOAD);
+    
+    
     
     // start with random seqNum, send syn
     startSeq = randomSeq();
@@ -409,7 +364,9 @@ int main(int argc, char *argv[]) {
                 }
                 
             }
-		ind = 0;
+            // this means we got everything, move on to next thing
+            memset(&window,0, sizeof(window));
+            ind = 0;
         }
         bytesRead = fread(fileBuffer, 1, 512, content);
         // printf("%d %d %d \n ", count, cwnd, bytesRead);
@@ -419,11 +376,25 @@ int main(int argc, char *argv[]) {
     if (bytesRead % MAXPAYLOAD != 0) {
         sendPacket(bytesRead, fileBuffer);
         count +=bytesRead;
+        timeNow();
+        double diff = current.tv_usec/1000000.0 + 0.5;
+        double sec = current.tv_sec * 1.0;
+        timer = sec + diff;
         while (count > 0) {
+            timeNow();
+            waitTime = current.tv_sec + 10;
             receiveACK(NULL, 0);
+            if (timedOut) {
+                handleTimeOut();
+            }
+            
         }
-        ind = 0;
     }
+
+
+
+
+
     startSeq = startSeq + bytesRead;
     // stop changing cwnd
     startData = 0;
@@ -486,4 +457,63 @@ int main(int argc, char *argv[]) {
     fclose(content);
     close(sockfd);
     return 0;
+}
+
+
+int randomSeq() {
+    srand(time(NULL));
+    int num = (rand() % (25600 + 1));
+    return num;
+}
+
+void timeNow() {
+    
+    struct timespec x;
+    clock_gettime(CLOCK_REALTIME, &x);
+    current.tv_sec = x.tv_sec;
+    current.tv_usec = x.tv_nsec / 1000.0;
+    
+}
+
+
+char* ackType(const char buf[]) {
+    char* type;
+    if(strcmp(buf, "100") == 0) {
+        type = "ACK";
+    } else if(strcmp(buf, "010") == 0) {
+        type = "SYN";
+    } else if(strcmp(buf, "110") == 0) {
+        type = "ACK SYN";
+    } else if(strcmp(buf, "001") == 0) {
+        type = "FIN";
+    } else if(strcmp(buf, "101") == 0) {
+        type = "ACK FIN";
+    } else
+        type = "";
+    return type;
+}
+
+
+void setBufACK(char* buf, int num) {
+    switch(num) {
+        case ACK:
+            buf[0] = '1'; buf[1] = '0'; buf[2] = '0';
+            break;
+        case SYN:
+            buf[0] = '0'; buf[1] = '1'; buf[2] = '0';
+            break;
+        case SYNACK:
+            buf[0] = '1'; buf[1] = '1'; buf[2] = '0';
+            break;
+        case FIN:
+            buf[0] = '0'; buf[1] = '0'; buf[2] = '1';
+            break;
+        case FINACK:
+            buf[0] = '1'; buf[1] = '0'; buf[2] = '1';
+            break;
+        default:
+            buf[0] = '0'; buf[1] = '0'; buf[2] = '0';
+            break;
+    }
+    buf[3] = '\0';
 }
