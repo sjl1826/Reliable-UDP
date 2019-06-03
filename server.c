@@ -153,11 +153,11 @@ unsigned short initiateBuffer(int sockfd, const struct sockaddr * cliaddr, int l
 			timeNow();
 		}
 
-		if(new_socket < 0 && isFirstPacket == 0) {
+		if(new_socket <= 0 && isFirstPacket == 0) {
 			initiateFINProcess(sockfd, (const struct sockaddr *)&cliaddr, len, seqNum, 0);
 			isFirstPacket = 1;
 			continue;
-		} else if(new_socket < 0) {
+		} else if(new_socket <= 0) {
 			continue;
 		}
 
@@ -282,7 +282,7 @@ int main(int argc, char *argv[]) {
 		char* rtype = ackType((*receivedHead).buf);
 		Packet *receivedPacket;
 		int packetReceivedFlag = 0;
-			if(strcmp(rtype, "") == 0 || strcmp(rtype, "ACK") == 0) {
+		if(strcmp(rtype, "") == 0 || strcmp(rtype, "ACK") == 0) {
 			receivedPacket = (Packet *) buffer;
 			packetReceivedFlag = 1;
 		}
