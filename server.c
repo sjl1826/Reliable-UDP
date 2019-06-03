@@ -22,6 +22,7 @@
 
 struct timeval current;
 FILE* currentFile;
+int synFlag = 0;
 
 void timeNow() {
 	struct timespec x;
@@ -181,7 +182,6 @@ int main(int argc, char *argv[]) {
 	int finFlag = 0;
 	int numConnections = 0;
 	int isFirstPacket = 1;
-	int synFlag = 0;
 	unsigned short seqNum = randomSeq();
 	char fileName[8];
 	
