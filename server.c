@@ -21,10 +21,6 @@
 #define FIN 3
 #define FINACK 4
 
-int sockfd;
-struct sockaddr_in servaddr, cliaddr;
-int len;
-
 struct timeval current;
 FILE* currentFile;
 
@@ -49,16 +45,13 @@ typedef struct Packet {
     char payload[512];
 } Packet;
 struct Packet packetBuff[40];
-
-
-
-void initiateFINProcess(int seqNum, int ackNum) {
+void initiateFINProcess(int sockfd, const struct sockaddr * cliaddr, int len, int seqNum, int ackNum) {
     Header fin;
     fin.seqNum = seqNum;
     fin.ackNum = 0;
     setBufACK(fin.buf, FIN);
     char* type = ackType(fin.buf);
-    sendto(sockfd, (const char *)&fin, 12, MSG_CONFIRM, (const struct sockaddr *) &cliaddr, len);
+    sendto(sockfd, (const char *)&fin, 12, MSG_CONFIRM, cliaddr, len);
     printf("SEND %hu %hu %d %d %s\n", fin.seqNum, fin.ackNum, 0, 0, type);
     timeNow();
     unsigned long finWait = current.tv_sec + 10;
@@ -69,7 +62,7 @@ void initiateFINProcess(int seqNum, int ackNum) {
         new_sock = recvfrom(sockfd, (char *)buff, MAXLINE, MSG_DONTWAIT, (struct sockaddr *) &cliaddr, &len);
         timeNow();
         if(current.tv_sec > finWait) {
-            initiateFINProcess(seqNum, ackNum);
+            initiateFINProcess(sockfd, (const struct sockaddr *) &cliaddr, len, seqNum, ackNum);
             return;
         }
     }
@@ -83,77 +76,6 @@ void initiateFINProcess(int seqNum, int ackNum) {
     printf("RECV %hu %hu %d %d %s\n", (*receivedACK).seqNum, (*receivedACK).ackNum, 0, 0, receivedACKType);
 }
 
-unsigned short initiateBuffer(int expectedSEQ, int isFirstPacket, int seqNum) {
-    int waitTime = 0;
-    int buffPos = 0;
-    char buffer[MAXLINE];
-    while(1) {
-        int new_socket = 0;
-        timeNow();
-        waitTime = current.tv_sec + 10;
-        while(new_socket <= 0 && current.tv_sec < waitTime) {
-            new_socket = recvfrom(sockfd, (char *)buffer, MAXLINE, MSG_DONTWAIT, (struct sockaddr *)&cliaddr, &len);
-            timeNow();
-        }
-        
-        if(new_socket < 0 && isFirstPacket == 0) {
-            initiateFINProcess(seqNum, 0);
-            isFirstPacket = 1;
-            continue;
-        } else if(new_socket < 0) {
-            continue;
-        }
-        
-        buffer[new_socket] = '\0';
-        Header *receivedHead = (Header *)buffer;
-        (*receivedHead).buf[3] = '\0';
-        char *rtype = ackType((*receivedHead).buf);
-        Packet *receivedPacket;
-        int packetReceivedFlag = 0;
-        if(strcmp(rtype, "") == 0) {
-            receivedPacket = (Packet *) buffer;
-            packetReceivedFlag = 1;
-        }
-        
-        if((*receivedPacket).h.seqNum == expectedSEQ) {
-            int i = 0;
-	    if(currentFile != NULL)
-	     fwrite((*receivedPacket).payload, 1, new_socket-12, currentFile);
-            for(i = 0; i < buffPos; i++) {
-		fwrite(packetBuff[i].payload, 1, new_socket-12, currentFile);
-            }
-            Header new_ack;
-            new_ack.seqNum = seqNum;
-            int pos = packetBuff[i-1].h.seqNum + new_socket-12;
-            int ack =  (pos > 25600) ? pos % 25600 : pos;
-            printf("GOT IT: %d %d %d\n", pos, ack, expectedSEQ);
-            new_ack.ackNum = ack ;
-            setBufACK(new_ack.buf, ACK);
-            buffPos = 0;
-            char* stype = ackType(new_ack.buf);
-            sendto(sockfd, (const char *)&new_ack, 12,
-                   MSG_CONFIRM, (const struct sockaddr *) &cliaddr,
-                   len);
-            printf("SEND %hu %hu %d %d %s\n", new_ack.seqNum, new_ack.ackNum, 0, 0, stype);
-            return new_ack.ackNum;
-            // Stop buffering, add payload to the file and add everything in buffer to file
-            // Send ACK with new ack
-        } else if(buffPos < 40) {
-            packetBuff[buffPos] = *receivedPacket;
-            Header ackHead;
-            ackHead.seqNum = seqNum;
-            ackHead.ackNum = expectedSEQ;
-            setBufACK(ackHead.buf, ACK);
-            buffPos+=1;
-            char* stype = ackType(ackHead.buf);
-            sendto(sockfd, (const char *)&ackHead, 12,
-                   MSG_CONFIRM, (const struct sockaddr *) &cliaddr,
-                   len);
-            printf("SEND %hu %hu %d %d %s\n", ackHead.seqNum, ackHead.ackNum, 0, 0, stype);
-        }
-    }
-}
-
 int main(int argc, char *argv[]) {
     if(argc < 2) {
         fprintf(stderr, "ERROR: Not enough arguments");
@@ -161,9 +83,10 @@ int main(int argc, char *argv[]) {
     }
     signal(SIGQUIT, signalHandler);
     signal(SIGTERM, signalHandler);
- 
+    
+    int sockfd;
     char buffer[MAXLINE];
-
+    struct sockaddr_in servaddr, cliaddr;
     
     int portnum = atoi(argv[1]);
     checkPortNum(portnum);
@@ -210,7 +133,7 @@ int main(int argc, char *argv[]) {
         }
         
         if(new_socket < 0 && isFirstPacket == 0) {
-            initiateFINProcess(seqNum, 0);
+            initiateFINProcess(sockfd, (const struct sockaddr *) &cliaddr, len, seqNum, 0);
             finFlag = 0;
             isFirstPacket = 1;
             continue;
@@ -228,11 +151,9 @@ int main(int argc, char *argv[]) {
             receivedPacket = (Packet *) buffer;
             packetReceivedFlag = 1;
         }
-        
         printf("RECV %hu %hu %d %d %s\n", (*receivedHead).seqNum, (*receivedHead).ackNum, 0, 0, rtype);
         
         Header ackHead;
-        
         unsigned short newACKNum = (*receivedHead).seqNum;
         if(isFirstPacket == 0 && newACKNum != prevACKNum) {
             ackHead.seqNum = seqNum;
@@ -244,7 +165,7 @@ int main(int argc, char *argv[]) {
                    MSG_CONFIRM, (const struct sockaddr *) &cliaddr,
                    len);
             printf("SEND %hu %hu %d %d %s\n", ackHead.seqNum, ackHead.ackNum, 0, 0, stype);
-            prevACKNum = initiateBuffer(prevACKNum, isFirstPacket, seqNum);
+            
             continue;
         }
         
@@ -277,9 +198,10 @@ int main(int argc, char *argv[]) {
                 seqNum += 1;
             }
             if(currentFile != NULL)
-                fwrite((*receivedPacket).payload, 1, new_socket-12, currentFile);
+                fprintf(currentFile, "%s", (*receivedPacket).payload);
         } else if(strcmp(rtype, "FIN") == 0) {
             finFlag = 1;
+            printf("HERE\n");
             setBufACK(ackHead.buf, FINACK);
         } else if(strcmp(rtype, "ACK") == 0) {
             if(seqNum >= 25600) seqNum = 0;
@@ -288,14 +210,14 @@ int main(int argc, char *argv[]) {
         }
         
         ackHead.seqNum = seqNum;
-        ackHead.padding = 0;
+        
         char* stype = ackType(ackHead.buf);
         sendto(sockfd, (const char *)&ackHead, 12,
                MSG_CONFIRM, (const struct sockaddr *) &cliaddr,
                len);
         printf("SEND %hu %hu %d %d %s\n", ackHead.seqNum, ackHead.ackNum, 0, 0, stype);
         if(finFlag) {
-            initiateFINProcess (seqNum, ackHead.ackNum);
+            initiateFINProcess(sockfd, (const struct sockaddr *) &cliaddr, len, seqNum, ackHead.ackNum);
             //Reset variables
             finFlag = 0;
             isFirstPacket = 1;
@@ -304,6 +226,7 @@ int main(int argc, char *argv[]) {
     
     close(sockfd);
     return 0;
+
 }
 
 void signalHandler(int sig) {
@@ -378,3 +301,6 @@ void timeNow() {
     current.tv_sec = x.tv_sec;
     current.tv_usec = x.tv_nsec / 1000;
 }
+
+
+
