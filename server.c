@@ -32,6 +32,7 @@ unsigned short randomSeq();
 void checkPortNum(int portnum);
 void signalHandler(int sig);
 void openFile(char* fileName);
+int k =0;
 
 int finWaitTime;
 
@@ -58,16 +59,16 @@ void initiateFINProcess(int sockfd, const struct sockaddr * cliaddr, int len, in
     sendto(sockfd, (const char *)&fin, 12, MSG_CONFIRM, cliaddr, len);
     printf("SEND %hu %hu %d %d %s\n", fin.seqNum, fin.ackNum, 0, 0, type);
     timeNow();
-    unsigned long finWait = current.tv_sec + 0.5;
-    
+    printf("%d wrote\n", k);
     int new_sock;
     char buff[MAXLINE];
     while(new_sock <= 0) {
         new_sock = recvfrom(sockfd, (char *)buff, MAXLINE, MSG_DONTWAIT, (struct sockaddr *) &cliaddr, &len);
         timeNow();
-        if(current.tv_sec > finWait) {
-            initiateFINProcess(sockfd, (const struct sockaddr *) &cliaddr, len, seqNum, ackNum);
-            return;
+        if(current.tv_sec > finWaitTime) {
+            //initiateFINProcess(sockfd, (const struct sockaddr *) &cliaddr, len, seqNum, ackNum);
+            fclose(currentFile);
+		return;
         }
     }
     
@@ -91,7 +92,6 @@ int main(int argc, char *argv[]) {
     int sockfd;
     char buffer[MAXLINE];
     struct sockaddr_in servaddr, cliaddr;
-    
     int portnum = atoi(argv[1]);
     checkPortNum(portnum);
     
@@ -175,7 +175,8 @@ int main(int argc, char *argv[]) {
         }
         
         if(new_socket > 12) {
-            newACKNum+= new_socket-12;
+            newACKNum+= (new_socket-12);
+	printf("SIZE %d\n", new_socket);
             if(newACKNum > 25600) {
                 newACKNum = newACKNum % 25600;
             }
@@ -202,6 +203,7 @@ int main(int argc, char *argv[]) {
                 if(seqNum >= 25600) seqNum = 0;
                 seqNum += 1;
             }
+		k += 1;
 		printf("WRITING %d\n", (*receivedPacket).h.seqNum);
             if(currentFile != NULL)
                 fwrite((*receivedPacket).payload, 1, new_socket-12, currentFile);
