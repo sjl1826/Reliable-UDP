@@ -200,9 +200,7 @@ int main(int argc, char *argv[]) {
 		  isFirstPacket = 1;
 		  continue;
 		} else if(new_socket < 0) {
-			perror("ERROR in recvfrom");
-			close(sockfd);
-			exit(EXIT_FAILURE);
+			continue;
 		}
 		timeNow();
 		if(dataWaitTime != 0 && current.tv_sec > dataWaitTime) {
@@ -234,6 +232,14 @@ int main(int argc, char *argv[]) {
 
 		if(strcmp(rtype, "SYN") == 0) {
 			setBufACK(ackHead.buf, SYNACK);
+		} else if(packetReceivedFlag == 1) {
+			setBufACK(ackHead.buf, ACK);
+			if(currentFile != NULL)
+				fwrite((*receivedPacket).payload, 1, new_socket-12,currentFile);
+		} else if(strcmp(rtype, "FIN") == 0) {
+			finFlag = 1;
+			setBufACK(ackHead.buf, FINACK);
+		} else if(strcmp(rtype, "ACK") == 0) {
 			if(isFirstPacket) {
 				isFirstPacket = 0;
 				numConnections+=1;
@@ -243,14 +249,6 @@ int main(int argc, char *argv[]) {
 				timeNow();
 				dataWaitTime = current.tv_sec + 10;
 			}
-		} else if(packetReceivedFlag == 1) {
-			setBufACK(ackHead.buf, ACK);
-			if(currentFile != NULL)
-				fwrite((*receivedPacket).payload, 1, new_socket-12,currentFile);
-		} else if(strcmp(rtype, "FIN") == 0) {
-			finFlag = 1;
-			setBufACK(ackHead.buf, FINACK);
-		} else if(strcmp(rtype, "ACK") == 0) {
 			timeNow();
 			waitTime = current.tv_sec + 10;
 			if(seqNum >= 25600) seqNum = 0;
