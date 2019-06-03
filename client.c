@@ -174,9 +174,12 @@ void receiveACK(char* resend, int head, int size) {
         }
     }
     if ( n <= 0 ) {
+	close(sockfd);
+	if (!finTime) {
         fprintf(stderr, "no response");
-        close(sockfd);
         exit(1);
+	} 
+	exit(0);
     }
     buffer[n] = '\0';
     Header* receivedHead = (Header *) buffer;
@@ -377,7 +380,11 @@ int main(int argc, char *argv[]) {
     receiveACK(finH,1,12);
     // for 2 seconds from server
     finTime = 1;
+
+    timeNow();
+    waitTime = current.tv_sec + 2;
     receiveACK(NULL, 1,12);
+
     //do i need to do this if it closes?
     Header finAck;
     startSeq +=1;

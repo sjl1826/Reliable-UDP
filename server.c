@@ -35,7 +35,7 @@ char* ackType(const char buf[]);
 unsigned short randomSeq();
 void checkPortNum(int portnum);
 void signalHandler(int sig);
-
+void openFile(char* fileName);
 
 typedef struct Header {
     unsigned short seqNum;
@@ -58,7 +58,7 @@ void initiateFINProcess(int seqNum, int ackNum) {
     fin.ackNum = 0;
     setBufACK(fin.buf, FIN);
     char* type = ackType(fin.buf);
-    sendto(sockfd, (const char *)&fin, 12, MSG_CONFIRM, cliaddr, len);
+    sendto(sockfd, (const char *)&fin, 12, MSG_CONFIRM, (const struct sockaddr *) &cliaddr, len);
     printf("SEND %hu %hu %d %d %s\n", fin.seqNum, fin.ackNum, 0, 0, type);
     timeNow();
     unsigned long finWait = current.tv_sec + 10;
@@ -116,14 +116,15 @@ unsigned short initiateBuffer(int expectedSEQ, int isFirstPacket, int seqNum) {
         }
         
         if((*receivedPacket).h.seqNum == expectedSEQ) {
-            if(currentFile != NULL)
+            int i = 0;
+	    if(currentFile != NULL)
 	     fwrite((*receivedPacket).payload, 1, new_socket-12, currentFile);
-            for(int i = 0; i < buffPos; i++) {
-		fwrite((*receivedPacket).payload, 1, new_socket-12, currentFile);
+            for(i = 0; i < buffPos; i++) {
+		fwrite(packetBuff[i].payload, 1, new_socket-12, currentFile);
             }
             Header new_ack;
             new_ack.seqNum = seqNum;
-            int pos = packetBuff[buffPos-1].h.seqNum + new_socket-12;
+            int pos = packetBuff[i-1].h.seqNum + new_socket-12;
             int ack =  (pos > 25600) ? pos % 25600 : pos;
             printf("GOT IT: %d %d %d\n", pos, ack, expectedSEQ);
             new_ack.ackNum = ack ;
@@ -234,7 +235,7 @@ int main(int argc, char *argv[]) {
         
         unsigned short newACKNum = (*receivedHead).seqNum;
         if(isFirstPacket == 0 && newACKNum != prevACKNum) {
-            ackHead.seqNum = seqNum
+            ackHead.seqNum = seqNum;
             ackHead.ackNum = prevACKNum;
             setBufACK(ackHead.buf, ACK);
             char* stype = ackType(ackHead.buf);
