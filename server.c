@@ -105,7 +105,7 @@ unsigned short randomSeq() {
 }
 
 void openFile(char* fileName) {
-	currentFile = fopen(fileName, "w");
+	currentFile = fopen(fileName, "wb+");
 }
 
 void initiateFINProcess(int sockfd, const struct sockaddr * cliaddr, int len, int seqNum, int ackNum) {
@@ -246,7 +246,7 @@ int main(int argc, char *argv[]) {
 		} else if(packetReceivedFlag == 1) {
 			setBufACK(ackHead.buf, ACK);
 			if(currentFile != NULL)
-				fprintf(currentFile, "%s", (*receivedPacket).payload);
+				fwrite((*receivedPacket).payload, 1, new_socket-12,currentFile);
 		} else if(strcmp(rtype, "FIN") == 0) {
 			finFlag = 1;
 			setBufACK(ackHead.buf, FINACK);
