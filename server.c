@@ -181,6 +181,7 @@ int main(int argc, char *argv[]) {
 	int finFlag = 0;
 	int numConnections = 0;
 	int isFirstPacket = 1;
+	int synFlag = 0;
 	unsigned short seqNum = randomSeq();
 	char fileName[8];
 	
@@ -198,6 +199,7 @@ int main(int argc, char *argv[]) {
 		  initiateFINProcess(sockfd, (const struct sockaddr *) &cliaddr, len, seqNum, 0);
 		  finFlag = 0;
 		  isFirstPacket = 1;
+			synFlag = 0;
 		  continue;
 		} else if(new_socket < 0) {
 			continue;
@@ -232,6 +234,7 @@ int main(int argc, char *argv[]) {
 
 		if(strcmp(rtype, "SYN") == 0) {
 			setBufACK(ackHead.buf, SYNACK);
+			synFlag = 1;
 		} else if(packetReceivedFlag == 1) {
 			setBufACK(ackHead.buf, ACK);
 			if(currentFile != NULL)
@@ -240,7 +243,7 @@ int main(int argc, char *argv[]) {
 			finFlag = 1;
 			setBufACK(ackHead.buf, FINACK);
 		} else if(strcmp(rtype, "ACK") == 0) {
-			if(isFirstPacket) {
+			if(isFirstPacket && synFlag) {
 				isFirstPacket = 0;
 				numConnections+=1;
 				sprintf(fileName, "%d.file", numConnections);
