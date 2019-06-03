@@ -116,7 +116,8 @@ void resendThing(char* thing, int size) {
             ackUpTo = findIndexOfAck(recAckNum - 512);
         else
             ackUpTo = findIndexOfAck(25600 - (512 - recAckNum));
-        if(ackUpTo < loc) {
+        printf("ACK %d %d\n", loc, ackUpTo);
+	if(ackUpTo < loc) {
             resendThing(thing, size);
         }
     } else {
@@ -179,6 +180,7 @@ void receiveACK(char* resend, int head, int size) {
         fprintf(stderr, "no response");
         exit(1);
 	} 
+	printf("NOTHING");
 	exit(0);
     }
     buffer[n] = '\0';
@@ -199,6 +201,7 @@ void receiveACK(char* resend, int head, int size) {
         ackUpTo = findIndexOfAck(recAckNum - 512);
 	else 
 		ackUpTo = findIndexOfAck(25600 - (512 - recAckNum));
+	printf(" ack up to %d\n", ackUpTo); 
         for (i = 0 ; i <= ackUpTo; i++) {
             if (window[i].h.padding == 0) {
                 window[i].h.padding = 1;

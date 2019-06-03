@@ -150,6 +150,7 @@ int main(int argc, char *argv[]) {
         if(strcmp(rtype, "") == 0 || strcmp(rtype, "ACK") == 0) {
             receivedPacket = (Packet *) buffer;
             packetReceivedFlag = 1;
+		printf("HELLO %d\n", (*receivedPacket).h.seqNum);
         }
         printf("RECV %hu %hu %d %d %s\n", (*receivedHead).seqNum, (*receivedHead).ackNum, 0, 0, rtype);
         
@@ -197,6 +198,7 @@ int main(int argc, char *argv[]) {
                 if(seqNum >= 25600) seqNum = 0;
                 seqNum += 1;
             }
+		printf("WRITING %d\n", (*receivedPacket).h.seqNum);
             if(currentFile != NULL)
                 fwrite((*receivedPacket).payload, 1, new_socket-12, currentFile);
         } else if(strcmp(rtype, "FIN") == 0) {
