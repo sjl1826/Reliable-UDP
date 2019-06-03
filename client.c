@@ -513,7 +513,8 @@ void sendPacket(int bytesRead, char* fileBuffer) {
     pack.h = head;
     memset(pack.payload, 0, MAXPAYLOAD);
     strncpy(pack.payload , fileBuffer, bytesRead);
-    char* sentPacket = (char *) &pack;
+   printf("BYTES READ: %d\n", bytesRead);
+     char* sentPacket = (char *) &pack;
     Packet* p = (Packet *) sentPacket;
     
     sendto(sockfd, (const char *)sentPacket, bytesRead + 12,

@@ -180,7 +180,10 @@ unsigned short initiateBuffer(int sockfd, const struct sockaddr * cliaddr, int l
 			}
 			Header new_ack;
 			new_ack.seqNum = seqNum;
-			new_ack.ackNum = packetBuff[buffPos-1].h.ackNum + 1;
+			int pos = packetBuff[buffPos-1].h.seqNum + 512;
+			int ack =  (pos > 25600) ? pos % 25600 : pos;
+			printf("GOT IT: %d %d %d\n", pos, ack, expectedSEQ);
+			new_ack.ackNum = ack ;
 			setBufACK(new_ack.buf, ACK);
 			buffPos = 0;
 			char* stype = ackType(new_ack.buf);
@@ -278,10 +281,8 @@ int main(int argc, char *argv[]) {
 		char* rtype = ackType((*receivedHead).buf);
 		Packet *receivedPacket;
 		int packetReceivedFlag = 0;
-		printf("HUH %s %s \n", rtype, (*receivedHead).buf);
-		if(strcmp(rtype, "") == 0 || strcmp(rtype, "ACK") == 0) {
+			if(strcmp(rtype, "") == 0 || strcmp(rtype, "ACK") == 0) {
 			receivedPacket = (Packet *) buffer;
-			printf("CAME %s %s \n", rtype, (*receivedHead).buf);
 			packetReceivedFlag = 1;
 		}
 		printf("RECV %hu %hu %d %d %s\n", (*receivedHead).seqNum, (*receivedHead).ackNum, 0, 0, rtype);
@@ -289,14 +290,13 @@ int main(int argc, char *argv[]) {
 		Header ackHead;
 		unsigned short newACKNum = (*receivedHead).seqNum;
 		if(isFirstPacket == 0 && newACKNum != prevACKNum) {
-			printf("INIT %d %d\n", newACKNum, prevACKNum);
 		
 			prevACKNum = initiateBuffer(sockfd, (const struct sockaddr *) &cliaddr, len, prevACKNum, isFirstPacket, seqNum);
 			continue;
 		}
 
 		 if(new_socket > 12) {
-                	newACKNum+= new_socket-12;
+                	newACKNum+= 512;
        			if (newACKNum > 25600) {
             		newACKNum = newACKNum % 25600;
         	} 
@@ -304,6 +304,7 @@ int main(int argc, char *argv[]) {
                 newACKNum = (newACKNum == 25600) ? 0 : newACKNum + 1;
         	} 
 		ackHead.ackNum = newACKNum;
+		printf(" NEXT:%d %d\n", ackHead.ackNum,new_socket);
 		prevACKNum = ackHead.ackNum;
 
 		if(strcmp(rtype, "SYN") == 0) {
@@ -332,7 +333,6 @@ int main(int argc, char *argv[]) {
 		} else if(strcmp(rtype, "ACK") == 0) {
 			if(seqNum >= 25600) seqNum = 0;
 			seqNum += 1;
-			printf("HERE132132\n");
 
 			continue;
 		}
