@@ -23,13 +23,13 @@
 struct timeval current;
 FILE* currentFile;
 int synFlag = 0;
-
-void timeNow() {
-	struct timespec x;
-	clock_gettime(CLOCK_REALTIME, &x);
-	current.tv_sec = x.tv_sec;
-	current.tv_usec = x.tv_nsec / 1000;
-}
+void timeNow();
+void setBufACK(char* buf, int num);
+char* ackType(const char buf[]);
+int randomSeq();
+void signalHandler(int sig);
+void openFile(char* fileName);
+void checkPortNum(int portnum);
 
 typedef struct Header {
     unsigned short seqNum;
@@ -42,73 +42,6 @@ typedef struct Packet {
     Header h;
     char payload[512];
 } Packet;
-
-void signalHandler(int sig) {
-	if(sig == SIGQUIT || sig == SIGTERM) {
-		fprintf(currentFile, "INTERRUPT");
-		exit(0);
-	}
-}
-
-void setBufACK(char* buf, int num) {
-	switch(num) {
-		case ACK:
-		  buf[0] = '1'; buf[1] = '0'; buf[2] = '0';
-			break;
-		case SYN:
-			buf[0] = '0'; buf[1] = '1'; buf[2] = '0';
-			break;
-		case SYNACK:
-			buf[0] = '1'; buf[1] = '1'; buf[2] = '0';
-			break;
-		case FIN:
-			buf[0] = '0'; buf[1] = '0'; buf[2] = '1';
-			break;
-		case FINACK:
-		        buf[0] = '1'; buf[1] = '0'; buf[2] = '1';
-			break;
-		default:
-			break;
-	}
-	buf[3] = '\0';
-}
-
-char* ackType(const char buf[]) {
-	if(strcmp(buf, "100\0") == 0) {
-		return "ACK";
-	} else if(strcmp(buf, "010\0") == 0) {
-		return "SYN";
-	} else if(strcmp(buf, "110\0") == 0) {
-		return "ACK SYN";
-	} else if(strcmp(buf, "001\0") == 0) {
-		return "FIN";
-	} else if(strcmp(buf, "101\0") == 0) {
-		return "ACK FIN";
-	}
-
-	return "";
-}
-
-void checkPortNum(int portnum) {
-	if (portnum >= 0 && portnum < 1025) {
-        fprintf(stderr,"ERROR: invalid port num\n");
-        exit(1);
-    }
-    if (portnum < 0 || 65535 < portnum) {
-        fprintf(stderr,"ERROR: invalid port num\n");
-        exit(1);
-    }
-}
-
-unsigned short randomSeq() {
-  srand(time(NULL));
-	int num = (rand() % (25600 - 0 + 1));
-	return num;
-}
-
-void openFile(char* fileName) {
-	currentFile = fopen(fileName, "wb+");
-}
 
 void initiateFINProcess(int sockfd, const struct sockaddr * cliaddr, int len, int seqNum, int ackNum) {
 	Header fin;
@@ -282,4 +215,78 @@ int main(int argc, char *argv[]) {
 	
 	close(sockfd);
 	return 0;
+}
+
+void timeNow() {
+	struct timespec x;
+	clock_gettime(CLOCK_REALTIME, &x);
+	current.tv_sec = x.tv_sec;
+	current.tv_usec = x.tv_nsec / 1000;
+}
+
+void signalHandler(int sig) {
+	if(sig == SIGQUIT || sig == SIGTERM) {
+		fprintf(currentFile, "INTERRUPT");
+		exit(0);
+	}
+}
+
+void setBufACK(char* buf, int num) {
+	switch(num) {
+		case ACK:
+		  buf[0] = '1'; buf[1] = '0'; buf[2] = '0';
+			break;
+		case SYN:
+			buf[0] = '0'; buf[1] = '1'; buf[2] = '0';
+			break;
+		case SYNACK:
+			buf[0] = '1'; buf[1] = '1'; buf[2] = '0';
+			break;
+		case FIN:
+			buf[0] = '0'; buf[1] = '0'; buf[2] = '1';
+			break;
+		case FINACK:
+		        buf[0] = '1'; buf[1] = '0'; buf[2] = '1';
+			break;
+		default:
+			break;
+	}
+	buf[3] = '\0';
+}
+
+char* ackType(const char buf[]) {
+	if(strcmp(buf, "100\0") == 0) {
+		return "ACK";
+	} else if(strcmp(buf, "010\0") == 0) {
+		return "SYN";
+	} else if(strcmp(buf, "110\0") == 0) {
+		return "ACK SYN";
+	} else if(strcmp(buf, "001\0") == 0) {
+		return "FIN";
+	} else if(strcmp(buf, "101\0") == 0) {
+		return "ACK FIN";
+	}
+
+	return "";
+}
+
+void checkPortNum(int portnum) {
+	if (portnum >= 0 && portnum < 1025) {
+        fprintf(stderr,"ERROR: invalid port num\n");
+        exit(1);
+    }
+    if (portnum < 0 || 65535 < portnum) {
+        fprintf(stderr,"ERROR: invalid port num\n");
+        exit(1);
+    }
+}
+
+unsigned short randomSeq() {
+  srand(time(NULL));
+	int num = (rand() % (25600 - 0 + 1));
+	return num;
+}
+
+void openFile(char* fileName) {
+	currentFile = fopen(fileName, "wb+");
 }
