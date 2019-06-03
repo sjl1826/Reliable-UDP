@@ -140,7 +140,7 @@ void handleTimeOut(int size) {
     for (int i =0; i < ind ; i++) {
         if (!window[i].h.padding) {
                 char* thing = (char *)&window[i];
-                resendThing(thing,size)
+                resendThing(thing,size);
                 return;
         }
     }

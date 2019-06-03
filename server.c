@@ -1,4 +1,5 @@
-/ Server side implementation of UDP client-server model
+
+// Server side implementation of UDP client-server model
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -174,13 +175,13 @@ unsigned short initiateBuffer(int sockfd, const struct sockaddr * cliaddr, int l
         
         if((*receivedPacket).h.seqNum == expectedSEQ) {
             if(currentFile != NULL)
-                fprintf(currentFile, "%s", (*receivedPacket).payload);
+	     fwrite((*receivedPacket).payload, 1, new_socket-12, currentFile);
             for(int i = 0; i < buffPos; i++) {
-                fprintf(currentFile, "%s", packetBuff[i].payload);
+		fwrite((*receivedPacket).payload, 1, new_socket-12, currentFile);
             }
             Header new_ack;
             new_ack.seqNum = seqNum;
-            int pos = packetBuff[buffPos-1].h.seqNum + 512;
+            int pos = packetBuff[buffPos-1].h.seqNum + new_socket-12;
             int ack =  (pos > 25600) ? pos % 25600 : pos;
             printf("GOT IT: %d %d %d\n", pos, ack, expectedSEQ);
             new_ack.ackNum = ack ;
@@ -295,7 +296,7 @@ int main(int argc, char *argv[]) {
         }
         
         if(new_socket > 12) {
-            newACKNum+= 512;
+            newACKNum+= new_socket-12;
             if(newACKNum > 25600) {
                 newACKNum = newACKNum % 25600;
             }
@@ -303,7 +304,6 @@ int main(int argc, char *argv[]) {
             newACKNum = (newACKNum == 25600) ? 0 : newACKNum + 1;
         }
         ackHead.ackNum = newACKNum;
-        printf(" NEXT:%d %d\n", ackHead.ackNum,new_socket);
         prevACKNum = ackHead.ackNum;
         
         if(strcmp(rtype, "SYN") == 0) {
@@ -324,7 +324,7 @@ int main(int argc, char *argv[]) {
                 seqNum += 1;
             }
             if(currentFile != NULL)
-                fprintf(currentFile, "%s", (*receivedPacket).payload);
+		fwrite((*receivedPacket).payload, 1, new_socket-12, currentFile);
         } else if(strcmp(rtype, "FIN") == 0) {
             finFlag = 1;
             printf("HERE\n");
