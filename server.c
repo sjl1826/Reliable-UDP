@@ -176,7 +176,7 @@ unsigned short initiateBuffer(int sockfd, const struct sockaddr * cliaddr, int l
 			if(currentFile != NULL)
 				fprintf(currentFile, "%s", (*receivedPacket).payload);
 			for(int i = 0; i < buffPos; i++) {
-				fprintf(currentFile, "%s", packetBuff[buffPos].payload);
+				fprintf(currentFile, "%s", packetBuff[i].payload);
 			}
 			Header new_ack;
 			new_ack.seqNum = seqNum;
