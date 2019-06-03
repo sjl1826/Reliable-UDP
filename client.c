@@ -98,7 +98,7 @@ int findIndexOfAck(int ack) {
 void resendThing(char* thing, int size) {
     char* sType;
     char* dup = "DUP\0";
-    sendto(sockfd, (const char *)thing, size,
+    sendto(sockfd, (const char *)thing, (size == 12) ? 12: size + 12,
            MSG_CONFIRM, (const struct sockaddr *) &servaddr,
            sizeof(servaddr));
     timeNow();
@@ -112,7 +112,13 @@ void resendThing(char* thing, int size) {
         printf( "SEND %d %d %d %d %s %s\n", (*cast).h.seqNum, (*cast).h.ackNum,
                cwnd, ssthresh, sType, dup);
         receiveACK(thing, 0, size);
-        if(recAckNum < (*cast).h.seqNum + 512) {
+        int ackUpTo;
+        int loc = findIndexOfAck((*cast).h.seqNum);
+        if (recAckNum >= 512)
+            ackUpTo = findIndexOfAck(recAckNum - 512);
+        else
+            ackUpTo = findIndexOfAck(25600 - (512 - recAckNum));
+        if(ackUpTo < loc) {
             resendThing(thing, size);
         }
     } else {
@@ -122,7 +128,7 @@ void resendThing(char* thing, int size) {
         printf( "SEND %d %d %d %d %s %s\n", (*cast).seqNum, (*cast).ackNum,
                cwnd, ssthresh, sType, dup);
         receiveACK(thing, 1, size);
-        if(recAckNum != (*cast).seqNum +1) {
+        if(recAckNum != ((*cast).seqNum  == 25600) ? 0 : (*cast).seqNum +1 ) {
             resendThing(thing, size);
         }
     }
