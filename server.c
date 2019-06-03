@@ -70,6 +70,7 @@ void setBufACK(char* buf, int num) {
 		default:
 			break;
 	}
+	buf[3] = '\0';
 }
 
 char* ackType(const char buf[]) {
@@ -125,6 +126,8 @@ void initiateFINProcess(int sockfd, const struct sockaddr * cliaddr, int len, in
 	while(new_sock <= 0) {
 		new_sock = recvfrom(sockfd, (char *)buff, MAXLINE, MSG_DONTWAIT, (struct sockaddr *) &cliaddr, &len);
 		timeNow();
+		if(new_sock > 0)
+		  break;
 		if(current.tv_sec > finWait) {
 			initiateFINProcess(sockfd, (const struct sockaddr *) &cliaddr, len, seqNum, ackNum);
 			return;
@@ -137,6 +140,7 @@ void initiateFINProcess(int sockfd, const struct sockaddr * cliaddr, int len, in
 	if(strcmp(receivedACKType, "ACK") == 0) {
 		fclose(currentFile);
 	}
+
 	printf("RECV %hu %hu %d %d %s\n", (*receivedACK).seqNum, (*receivedACK).ackNum, 0, 0, receivedACKType);
 }
 
@@ -218,6 +222,7 @@ int main(int argc, char *argv[]) {
 			receivedPacket = (Packet *) buffer;
 			packetReceivedFlag = 1;
 		}
+
 		printf("RECV %hu %hu %d %d %s\n", (*receivedHead).seqNum, (*receivedHead).ackNum, 0, 0, rtype);
 
 		Header ackHead;
@@ -271,6 +276,7 @@ int main(int argc, char *argv[]) {
 			//Reset variables
 			finFlag = 0;
 			isFirstPacket = 1;
+			synFlag = 0;
 		}
 	}
 	
