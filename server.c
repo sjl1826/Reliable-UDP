@@ -148,7 +148,7 @@ unsigned short initiateBuffer(int sockfd, const struct sockaddr * cliaddr, int l
 		int new_socket = 0;
 		timeNow();
 		waitTime = current.tv_sec + 10;
-		while (new_socket <= 0 && current.tv_sec < waitTime) {
+		while (new_socket < 0 && current.tv_sec < waitTime) {
 			new_socket = recvfrom(sockfd, (char *)buffer, MAXLINE, MSG_DONTWAIT, (struct sockaddr *)&cliaddr, &len);
 			timeNow();
 		}
