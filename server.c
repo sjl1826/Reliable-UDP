@@ -26,7 +26,7 @@ int synFlag = 0;
 void timeNow();
 void setBufACK(char* buf, int num);
 char* ackType(const char buf[]);
-int randomSeq();
+unsigned short randomSeq();
 void signalHandler(int sig);
 void openFile(char* fileName);
 void checkPortNum(int portnum);
