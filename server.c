@@ -48,7 +48,7 @@ typedef struct Packet {
 } Packet;
 struct Packet packetBuff[40];
 void initiateFINProcess(int sockfd, const struct sockaddr * cliaddr, int len, int seqNum, int ackNum) {
-    if(current.tv_Sec > finWaitTime)
+    if(current.tv_sec > finWaitTime)
 			return;
 		Header fin;
     fin.seqNum = seqNum;
