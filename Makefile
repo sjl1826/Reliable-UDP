@@ -10,4 +10,4 @@ client:
 	gcc -o client client.c
 
 clean:
-	rm client server
+	rm client server *.file
