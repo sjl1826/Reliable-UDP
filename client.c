@@ -64,9 +64,7 @@ struct timeval current;
 // CongestionControl vars
 Packet window[20];
 double timer;
-int received;
 int ind;
-int timedOut = 0;
 
 //function prototypes
 void sendPacket(int bytesRead, char* fileBuffer);
@@ -128,7 +126,7 @@ void resendThing(char* thing, int size) {
         printf( "SEND %d %d %d %d %s %s\n", (*cast).seqNum, (*cast).ackNum,
                cwnd, ssthresh, sType, dup);
         receiveACK(thing, 1, size);
-        if(recAckNum != ((*cast).seqNum  == 25600) ? 0 : (*cast).seqNum +1 ) {
+        if(recAckNum != (((*cast).seqNum  == 25600) ? 0 : (*cast).seqNum +1 )) {
             resendThing(thing, size);
         }
     }
@@ -142,8 +140,7 @@ void handleTimeOut(int size) {
     for (int i =0; i < ind ; i++) {
         if (!window[i].h.padding) {
                 char* thing = (char *)&window[i];
-                resendThing(thing,size);
-                timedOut = 0;
+                resendThing(thing,size)
                 return;
         }
     }
@@ -154,12 +151,11 @@ void receiveACK(char* resend, int head, int size) {
     int n = 0;
     while (current.tv_sec <= waitTime && n <=0 ) {
         timeNow();
+        double currentTime = current.tv_sec + (current.tv_usec /1000000.0);
         n = recvfrom(sockfd, (char *)buffer, MAXLINE,
                      MSG_DONTWAIT, (struct sockaddr *) &servaddr,
                      &len);
-        // this handles the header packets
         if (resend != NULL && head == 1) {
-            double currentTime = current.tv_sec + (current.tv_usec /1000000.0);
             if (currentTime > timer) {
                 resendThing(resend, 12);
                 cwnd = 512;
@@ -167,9 +163,8 @@ void receiveACK(char* resend, int head, int size) {
                 return;
             }
         } else if (head == 0 && n<=0) {
-            double currentTime = current.tv_sec + (current.tv_usec /1000000.0);
             if (currentTime > timer) {
-                for (int i =0; i < ind ; i++) {
+                for (int i = 0; i < ind ; i++) {
                     if (!window[i].h.padding) {
                         handleTimeOut(512);
                         return;
@@ -198,7 +193,7 @@ void receiveACK(char* resend, int head, int size) {
         int ackOnce = 0;
         int i = 0;
 	if (recAckNum >= 512)
-        	ackUpTo = findIndexOfAck(recAckNum - 512);
+        ackUpTo = findIndexOfAck(recAckNum - 512);
 	else 
 		ackUpTo = findIndexOfAck(25600 - (512 - recAckNum));
         for (i = 0 ; i <= ackUpTo; i++) {
@@ -208,7 +203,7 @@ void receiveACK(char* resend, int head, int size) {
                 double diff = current.tv_usec/1000000.0 + 0.5;
                 double sec = current.tv_sec * 1.0;
                 timer = sec + diff;
-                count -=512;
+                count -= 512;
                 if (startData && !ackOnce) {
                     ackOnce = 1;
                     if (cwnd < ssthresh)
@@ -340,7 +335,7 @@ int main(int argc, char *argv[]) {
             timeNow();
             waitTime = current.tv_sec + 10;
             int read = 512;
-            if (count < 512)
+            if (count % 512 != 0)
                 read = bytesRead;
             receiveACK(NULL, 0, read);
         }
@@ -379,10 +374,11 @@ int main(int argc, char *argv[]) {
     timeNow();
     waitTime = current.tv_sec + 10;
     timer = current.tv_sec + current.tv_usec/1000000.0 + 0.5;
-    receiveACK(finH, 1,12);
+    receiveACK(finH,1,12);
     // for 2 seconds from server
     finTime = 1;
     receiveACK(NULL, 1,12);
+    //do i need to do this if it closes?
     Header finAck;
     startSeq +=1;
     if (startSeq == 25600) {
@@ -396,7 +392,6 @@ int main(int argc, char *argv[]) {
     }
     
     finAck.seqNum = startSeq;
-    
     finAck.ackNum = recSeqNum + 1;
     setBufACK(finAck.buf, ACK);
     finAck.padding = 0;
@@ -518,8 +513,7 @@ void sendPacket(int bytesRead, char* fileBuffer) {
     
     pack.h = head;
     memset(pack.payload, 0, MAXPAYLOAD);
-    strncpy(pack.payload , fileBuffer, bytesRead);
-   printf("BYTES READ: %d\n", bytesRead);
+    memcpy(pack.payload , fileBuffer, bytesRead);
      char* sentPacket = (char *) &pack;
     Packet* p = (Packet *) sentPacket;
     
