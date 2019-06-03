@@ -23,6 +23,9 @@
 struct timeval current;
 FILE* currentFile;
 int synFlag = 0;
+int finFlag = 0;
+int numConnections = 0;
+int isFirstPacket = 1;
 void timeNow();
 void setBufACK(char* buf, int num);
 char* ackType(const char buf[]);
@@ -42,6 +45,7 @@ typedef struct Packet {
     Header h;
     char payload[512];
 } Packet;
+struct Packet packetBuff[40];
 
 void initiateFINProcess(int sockfd, const struct sockaddr * cliaddr, int len, int seqNum, int ackNum) {
 	Header fin;
@@ -116,9 +120,6 @@ int main(int argc, char *argv[]) {
 	unsigned long waitTime = 0;
 	unsigned long dataWaitTime = 0;
 
-	int finFlag = 0;
-	int numConnections = 0;
-	int isFirstPacket = 1;
 	unsigned short seqNum = randomSeq();
 	char fileName[8];
 	
