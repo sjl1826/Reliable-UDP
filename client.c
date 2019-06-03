@@ -1,4 +1,4 @@
-// Client side implementation of UDP client-server model
+ // Client side implementation of UDP client-server model
 #include <stdio.h>
 //#include <ctime.h>
 #include <poll.h>
@@ -185,7 +185,7 @@ void sendPacket(int bytesRead, char* fileBuffer) {
     head.padding = 0;
     pack.h = head;
     memset(pack.payload, 0, MAXPAYLOAD);
-    strncpy(pack.payload , fileBuffer, bytesRead);
+    memcpy(pack.payload , fileBuffer, bytesRead);
     char* sentPacket = (char *) &pack;
     Packet* p = (Packet *) sentPacket;
     
