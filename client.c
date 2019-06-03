@@ -86,6 +86,10 @@ int checkCount() {
 
 int findIndexOfAck(int ack) {
 	int i;
+	int first = window[0].h.seqNum;
+	int diff = (first < 512) ? (25600-512-first) : (first - 512);
+	if (ack == diff) 
+		return -1; 
     for (i=0; i < ind; i+=1) {
 	if (window[i].h.seqNum == ack)
             break;
@@ -305,11 +309,13 @@ int main(int argc, char *argv[]) {
     // start keeping track of cwnd
     startData = 1;
     ind = 0;
+	int k =0;
     bytesRead = fread(fileBuffer, 1, 512, content);
     while(bytesRead == MAXPAYLOAD) {
 	 if((count + 512) <= cwnd) {
             sendPacket(bytesRead, fileBuffer);
             count += 512;
+		k+=1;
         }
         if(count >= cwnd || ( cwnd - count < 512  )) {
             timeNow();
@@ -334,6 +340,7 @@ int main(int argc, char *argv[]) {
         sendPacket(bytesRead, fileBuffer);
         count +=bytesRead;
         timeNow();
+	k+=1;
         double diff = current.tv_usec/1000000.0 + 0.5;
         double sec = current.tv_sec * 1.0;
         timer = sec + diff;
@@ -341,7 +348,7 @@ int main(int argc, char *argv[]) {
             timeNow();
             waitTime = current.tv_sec + 10;
             int read = 512;
-            if (count % 512 != 0)
+            if (count < 512)
                 read = bytesRead;
             receiveACK(NULL, 0, read);
         }
@@ -349,7 +356,7 @@ int main(int argc, char *argv[]) {
 
 
 
-
+	printf("SEND %d\n", k);
 
     startSeq = startSeq + bytesRead;
     // stop changing cwnd
