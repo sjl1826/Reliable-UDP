@@ -148,7 +148,7 @@ unsigned short initiateBuffer(int sockfd, const struct sockaddr * cliaddr, int l
 		int new_socket = 0;
 		timeNow();
 		waitTime = current.tv_sec + 10;
-		while (new_socket <= 0 && current.tv_sec < waitTime) {
+		while(new_socket <= 0 && current.tv_sec < waitTime) {
 			new_socket = recvfrom(sockfd, (char *)buffer, MAXLINE, MSG_DONTWAIT, (struct sockaddr *)&cliaddr, &len);
 			timeNow();
 		}
@@ -157,7 +157,7 @@ unsigned short initiateBuffer(int sockfd, const struct sockaddr * cliaddr, int l
 			initiateFINProcess(sockfd, (const struct sockaddr *)&cliaddr, len, seqNum, 0);
 			isFirstPacket = 1;
 			continue;
-		} else if (new_socket < 0) {
+		} else if(new_socket < 0) {
 			continue;
 		}
 
@@ -168,7 +168,7 @@ unsigned short initiateBuffer(int sockfd, const struct sockaddr * cliaddr, int l
 		Packet *receivedPacket;
 		int packetReceivedFlag = 0;
 		if(strcmp(rtype, "") == 0) {
-			receivedPacket = (Packet *)buffer;
+			receivedPacket = (Packet *) buffer;
 			packetReceivedFlag = 1;
 		}
 
@@ -290,19 +290,18 @@ int main(int argc, char *argv[]) {
 		Header ackHead;
 		unsigned short newACKNum = (*receivedHead).seqNum;
 		if(isFirstPacket == 0 && newACKNum != prevACKNum) {
-		
 			prevACKNum = initiateBuffer(sockfd, (const struct sockaddr *) &cliaddr, len, prevACKNum, isFirstPacket, seqNum);
 			continue;
 		}
 
-		 if(new_socket > 12) {
-                	newACKNum+= 512;
-       			if (newACKNum > 25600) {
-            		newACKNum = newACKNum % 25600;
-        	} 
-        	} else {
-                newACKNum = (newACKNum == 25600) ? 0 : newACKNum + 1;
-        	} 
+		if(new_socket > 12) {
+			newACKNum+= 512;
+			if(newACKNum > 25600) {
+        newACKNum = newACKNum % 25600;
+      } 
+    } else {
+      newACKNum = (newACKNum == 25600) ? 0 : newACKNum + 1;
+    } 
 		ackHead.ackNum = newACKNum;
 		printf(" NEXT:%d %d\n", ackHead.ackNum,new_socket);
 		prevACKNum = ackHead.ackNum;
@@ -333,7 +332,6 @@ int main(int argc, char *argv[]) {
 		} else if(strcmp(rtype, "ACK") == 0) {
 			if(seqNum >= 25600) seqNum = 0;
 			seqNum += 1;
-
 			continue;
 		}
 
