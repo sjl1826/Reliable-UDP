@@ -290,6 +290,15 @@ int main(int argc, char *argv[]) {
 		Header ackHead;
 		unsigned short newACKNum = (*receivedHead).seqNum;
 		if(isFirstPacket == 0 && newACKNum != prevACKNum) {
+			Header head;
+			head.seqNum = seqNum;
+			head.ackNum = prevACKNum;
+			setBufACK(head.buf, ACK);
+			char* btype = ackType(head.buf);
+			sendto(sockfd, (const char *)&head, 12, 
+				MSG_CONFIRM, (const struct sockaddr *) &cliaddr, 
+		       	len);
+			printf("SEND %hu %hu %d %d %s\n", head.seqNum, head.ackNum, 0, 0, btype);
 			prevACKNum = initiateBuffer(sockfd, (const struct sockaddr *) &cliaddr, len, prevACKNum, isFirstPacket, seqNum);
 			continue;
 		}
