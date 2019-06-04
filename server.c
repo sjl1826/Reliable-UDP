@@ -1,4 +1,3 @@
-
 // Server side implementation of UDP client-server model
 #include <stdio.h>
 #include <stdlib.h>
@@ -61,7 +60,6 @@ void initiateFINProcess(int sockfd, const struct sockaddr *cliaddr, int len, int
     sendto(sockfd, (const char *)&fin, 12, MSG_CONFIRM, cliaddr, len);
     printf("SEND %hu %hu %d %d %s\n", fin.seqNum, fin.ackNum, 0, 0, type);
     timeNow();
-    printf("%d wrote\n", k);
     int new_sock;
     char buff[MAXLINE];
     while (new_sock <= 0)
@@ -70,7 +68,6 @@ void initiateFINProcess(int sockfd, const struct sockaddr *cliaddr, int len, int
         timeNow();
         if (current.tv_sec > finWaitTime)
         {
-            //initiateFINProcess(sockfd, (const struct sockaddr *) &cliaddr, len, seqNum, ackNum);
             fclose(currentFile);
             return;
         }
@@ -169,7 +166,6 @@ int main(int argc, char *argv[])
         {
             receivedPacket = (Packet *)buffer;
             packetReceivedFlag = 1;
-            printf("HELLO %d\n", (*receivedPacket).h.seqNum);
         }
         printf("RECV %hu %hu %d %d %s\n", (*receivedHead).seqNum, (*receivedHead).ackNum, 0, 0, rtype);
 
@@ -193,7 +189,6 @@ int main(int argc, char *argv[])
         if (new_socket > 12)
         {
             newACKNum += (new_socket - 12);
-            printf("SIZE %d\n", new_socket);
             if (newACKNum > 25600)
             {
                 newACKNum = newACKNum % 25600;
@@ -230,14 +225,12 @@ int main(int argc, char *argv[])
                 seqNum += 1;
             }
             k += 1;
-            printf("WRITING %d\n", (*receivedPacket).h.seqNum);
             if (currentFile != NULL)
                 fwrite((*receivedPacket).payload, 1, new_socket - 12, currentFile);
         }
         else if (strcmp(rtype, "FIN") == 0)
         {
             finFlag = 1;
-            printf("HERE\n");
             setBufACK(ackHead.buf, FINACK);
         }
         else if (strcmp(rtype, "ACK") == 0)

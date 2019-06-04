@@ -88,7 +88,6 @@ int checkCount()
 
 int findIndexOfAck(int ack)
 {
-    printf("wow %d\n", ack);
     int i;
     int first = window[0].h.seqNum;
     int diff = (first < 512) ? (25600 - 512 - first) : (first - 512);
@@ -130,7 +129,6 @@ void resendThing(char *thing, int size)
         receiveACK(thing, 0, size);
         int ackUpTo;
         int loc = findIndexOfAck((*cast).h.seqNum);
-        printf("rec %d\n", recAckNum);
         if (recAckNum >= size)
             ackUpTo = findIndexOfAck(recAckNum - size);
         else
@@ -212,10 +210,9 @@ void receiveACK(char *resend, int head, int size)
         close(sockfd);
         if (!finTime)
         {
-            fprintf(stderr, "no response");
+            fprintf(stderr, "No response");
             exit(1);
         }
-        printf("NOTHING");
         exit(0);
     }
     buffer[n] = '\0';
@@ -237,7 +234,6 @@ void receiveACK(char *resend, int head, int size)
             ackUpTo = findIndexOfAck(recAckNum - size);
         else
             ackUpTo = findIndexOfAck(25600 - (size - recAckNum));
-        printf(" ack up to %d\n", ackUpTo);
         for (i = 0; i <= ackUpTo; i++)
         {
             if (window[i].h.padding == 0)
@@ -310,7 +306,7 @@ int main(int argc, char *argv[])
     FILE *content = fopen(filename, "rb");
     if (content == NULL)
     {
-        perror("file could not be opened");
+        perror("ERROR: File could not be opened");
         exit(EXIT_FAILURE);
     }
     fseek(content, 0, SEEK_END);
@@ -390,14 +386,11 @@ int main(int argc, char *argv[])
             timeNow();
             waitTime = current.tv_sec + 10;
             int read = 512;
-            printf("%d %d COUNT\n", count, bytesRead);
             if (count <= 512)
                 read = bytesRead;
             receiveACK(NULL, 0, read);
         }
     }
-
-    printf("SEND %d\n", k);
 
     startSeq = startSeq + bytesRead;
     // stop changing cwnd
