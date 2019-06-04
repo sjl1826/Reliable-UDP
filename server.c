@@ -144,7 +144,8 @@ int main(int argc, char *argv[])
             new_socket = recvfrom(sockfd, (char *)buffer, MAXLINE, MSG_DONTWAIT, (struct sockaddr *)&cliaddr, &len);
             timeNow();
         }
-
+	double currentTime = current.tv_sec*1.0 + current.tv_usec/1000000.0;
+	printf("TIME: %.3f\n",currentTime);
         if (new_socket < 0 && isFirstPacket == 0)
         {
             initiateFINProcess(sockfd, (const struct sockaddr *)&cliaddr, len, seqNum, 0);
@@ -238,6 +239,10 @@ int main(int argc, char *argv[])
         sendto(sockfd, (const char *)&ackHead, 12,
                MSG_CONFIRM, (const struct sockaddr *)&cliaddr,
                len);
+	timeNow();
+	currentTime = current.tv_sec*1.0 + current.tv_usec/1000000.0;
+        printf("TIME: %.3f\n",currentTime);
+
         printf("SEND %hu %hu %d %d %s\n", ackHead.seqNum, ackHead.ackNum, 0, 0, stype);
         if (strcmp(rtype, "SYN") == 0)
         {

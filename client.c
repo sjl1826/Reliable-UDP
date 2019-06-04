@@ -180,7 +180,8 @@ void receiveACK(char *resend, int head, int size)
         n = recvfrom(sockfd, (char *)buffer, MAXLINE,
                      MSG_DONTWAIT, (struct sockaddr *)&servaddr,
                      &len);
-        if (resend != NULL && head == 1)
+	printf("n %d\n", n);     
+   if (resend != NULL && head == 1)
         {
             if (currentTime > timer)
             {
