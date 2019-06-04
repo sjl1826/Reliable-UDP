@@ -129,8 +129,8 @@ void resendThing(char *thing, int size)
                cwnd, ssthresh, sType, dup);
         receiveACK(thing, 0, size);
         int ackUpTo;
+        printf("FROM RESEND %d\n", size);
         int loc = findIndexOfAck((*cast).h.seqNum);
-	printf("%d size\n", size);
         if (recAckNum >= size)
             ackUpTo = findIndexOfAck(recAckNum - size);
         else
@@ -209,13 +209,11 @@ void receiveACK(char *resend, int head, int size)
     }
     if (n <= 0)
     {
-        close(sockfd);
         if (!finTime)
         {
             fprintf(stderr, "No response");
             exit(1);
         }
-        exit(0);
     }
     buffer[n] = '\0';
     Header *receivedHead = (Header *)buffer;
@@ -232,6 +230,7 @@ void receiveACK(char *resend, int head, int size)
         int ackUpTo = 0;
         int ackOnce = 0;
         int i = 0;
+        printf("FROM RECV %d\n", size);
         if (recAckNum >= 512)
             ackUpTo = findIndexOfAck(recAckNum - size);
         else
@@ -389,9 +388,9 @@ int main(int argc, char *argv[])
             timeNow();
             waitTime = current.tv_sec + 10;
             int read = 512;
-            if (count <= 512 ){
+            if (count <= 512 )
                 read = bytesRead;
-		}
+            printf("%d READ\n", read);
             receiveACK(NULL, 0, read);
         }
     }
@@ -440,7 +439,8 @@ int main(int argc, char *argv[])
 
     timeNow();
     waitTime = current.tv_sec + 2;
-    receiveACK(NULL, 1, 12);
+    while (current.tv_sec < waitTime) {
+        receiveACK(NULL, 1, 12);
 
     //do i need to do this if it closes?
     Header finAck;
@@ -471,7 +471,9 @@ int main(int argc, char *argv[])
     char *sTypeFinAck = ackType(finAck.buf);
     printf("SEND %d %d %d %d %s\n", finAck.seqNum, finAck.ackNum,
            cwnd, ssthresh, sTypeFinAck);
-
+    timeNow();
+    }
+    
     fclose(content);
     close(sockfd);
     return 0;
