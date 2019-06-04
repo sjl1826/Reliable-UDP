@@ -31,6 +31,7 @@ void checkPortNum(int portnum);
 void signalHandler(int sig);
 void openFile(char *fileName);
 int k = 0;
+int synFlag = 0;
 
 int finWaitTime;
 char* fileNameT = "";
@@ -150,6 +151,7 @@ int main(int argc, char *argv[])
             initiateFINProcess(sockfd, (const struct sockaddr *)&cliaddr, len, seqNum, 0);
             finFlag = 0;
             isFirstPacket = 1;
+            synFlag = 0;
             continue;
         }
         else if (new_socket < 0)
@@ -205,6 +207,7 @@ int main(int argc, char *argv[])
         if (strcmp(rtype, "SYN") == 0)
         {
             setBufACK(ackHead.buf, SYNACK);
+            synFlag = 1;
         }
         else if (packetReceivedFlag == 1)
         {
@@ -239,9 +242,9 @@ int main(int argc, char *argv[])
                MSG_CONFIRM, (const struct sockaddr *)&cliaddr,
                len);
         printf("SEND %hu %hu %d %d %s\n", ackHead.seqNum, ackHead.ackNum, 0, 0, stype);
-        if (strcmp(rtype, "SYN") == 0)
+        if (strcmp(rtype, "ACK") == 0)
         {
-            if (isFirstPacket)
+            if (isFirstPacket && synFlag)
             {
                 isFirstPacket = 0;
                 numConnections += 1;
@@ -251,6 +254,8 @@ int main(int argc, char *argv[])
                 timeNow();
                 dataWaitTime = current.tv_sec + 10;
             }
+            timeNow();
+            waitTime = current.tv_sec + 10;
         }
         if (finFlag)
         {
@@ -260,6 +265,7 @@ int main(int argc, char *argv[])
             //Reset variables
             finFlag = 0;
             isFirstPacket = 1;
+            synFlag = 0;
         }
     }
 
