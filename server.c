@@ -33,6 +33,9 @@ void checkPortNum(int portnum);
 void signalHandler(int sig);
 void openFile(char* fileName);
 int k =0;
+
+int finWaitTime;
+
 typedef struct Header {
     unsigned short seqNum;
     unsigned short ackNum;
@@ -46,7 +49,9 @@ typedef struct Packet {
 } Packet;
 struct Packet packetBuff[40];
 void initiateFINProcess(int sockfd, const struct sockaddr * cliaddr, int len, int seqNum, int ackNum) {
-    Header fin;
+    if(current.tv_sec > finWaitTime)
+			return;
+		Header fin;
     fin.seqNum = seqNum;
     fin.ackNum = 0;
     setBufACK(fin.buf, FIN);
@@ -54,7 +59,6 @@ void initiateFINProcess(int sockfd, const struct sockaddr * cliaddr, int len, in
     sendto(sockfd, (const char *)&fin, 12, MSG_CONFIRM, cliaddr, len);
     printf("SEND %hu %hu %d %d %s\n", fin.seqNum, fin.ackNum, 0, 0, type);
     timeNow();
-    unsigned long finWait = current.tv_sec + 10;
     printf("%d wrote\n", k);
     int new_sock;
     char buff[MAXLINE];
@@ -220,6 +224,8 @@ int main(int argc, char *argv[]) {
                len);
         printf("SEND %hu %hu %d %d %s\n", ackHead.seqNum, ackHead.ackNum, 0, 0, stype);
         if(finFlag) {
+						timeNow();
+						finWaitTime = current.tv_sec + 10;
             initiateFINProcess(sockfd, (const struct sockaddr *) &cliaddr, len, seqNum, ackHead.ackNum);
             //Reset variables
             finFlag = 0;

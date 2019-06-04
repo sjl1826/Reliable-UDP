@@ -89,12 +89,18 @@ int findIndexOfAck(int ack) {
 	int first = window[0].h.seqNum;
 	int diff = (first < 512) ? (25600-512-first) : (first - 512);
 	if (ack == diff) 
-		return -1; 
+		return -1;
+    int found = 0;
     for (i=0; i < ind; i+=1) {
-	if (window[i].h.seqNum == ack)
+        if (window[i].h.seqNum == ack) {
+            found = 1;
             break;
+        }
     }
+    if (found)
     return i;
+    else
+        return -1;
 }
 
 void resendThing(char* thing, int size) {
