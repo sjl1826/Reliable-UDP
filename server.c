@@ -207,7 +207,7 @@ int main(int argc, char *argv[])
         if (strcmp(rtype, "SYN") == 0)
         {
             setBufACK(ackHead.buf, SYNACK);
-            synFlag = 1;
+	    synFlag = 1;
         }
         else if (packetReceivedFlag == 1)
         {
@@ -254,6 +254,10 @@ int main(int argc, char *argv[])
                 timeNow();
                 dataWaitTime = current.tv_sec + 10;
             }
+	    if(packetReceivedFlag) {
+	      if (currentFile != NULL)
+                fwrite((*receivedPacket).payload, 1, new_socket - 12, currentFile);
+	    }
             timeNow();
             waitTime = current.tv_sec + 10;
         }
