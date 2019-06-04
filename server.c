@@ -204,16 +204,6 @@ int main(int argc, char *argv[])
         if (strcmp(rtype, "SYN") == 0)
         {
             setBufACK(ackHead.buf, SYNACK);
-            if (isFirstPacket)
-            {
-                isFirstPacket = 0;
-                numConnections += 1;
-                sprintf(fileName, "%d.file", numConnections);
-                fileName[7] = '\0';
-                openFile(fileName);
-                timeNow();
-                dataWaitTime = current.tv_sec + 10;
-            }
         }
         else if (packetReceivedFlag == 1)
         {
@@ -248,6 +238,19 @@ int main(int argc, char *argv[])
                MSG_CONFIRM, (const struct sockaddr *)&cliaddr,
                len);
         printf("SEND %hu %hu %d %d %s\n", ackHead.seqNum, ackHead.ackNum, 0, 0, stype);
+        if (strcmp(rtype, "SYN") == 0)
+        {
+            if (isFirstPacket)
+            {
+                isFirstPacket = 0;
+                numConnections += 1;
+                sprintf(fileName, "%d.file", numConnections);
+                fileName[7] = '\0';
+                openFile(fileName);
+                timeNow();
+                dataWaitTime = current.tv_sec + 10;
+            }
+        }
         if (finFlag)
         {
             timeNow();
