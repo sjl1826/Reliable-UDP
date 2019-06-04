@@ -65,7 +65,7 @@ void initiateFINProcess(int sockfd, const struct sockaddr * cliaddr, int len, in
     while(new_sock <= 0) {
         new_sock = recvfrom(sockfd, (char *)buff, MAXLINE, MSG_DONTWAIT, (struct sockaddr *) &cliaddr, &len);
         timeNow();
-        if(current.tv_sec > finWait) {
+        if(current.tv_sec > finWaitTime) {
             //initiateFINProcess(sockfd, (const struct sockaddr *) &cliaddr, len, seqNum, ackNum);
             fclose(currentFile);
 		return;
@@ -175,7 +175,8 @@ int main(int argc, char *argv[]) {
         }
         
         if(new_socket > 12) {
-            newACKNum+= new_socket-12;
+            newACKNum+= (new_socket-12);
+	printf("SIZE %d\n", new_socket);
             if(newACKNum > 25600) {
                 newACKNum = newACKNum % 25600;
             }

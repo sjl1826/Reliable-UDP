@@ -354,7 +354,8 @@ int main(int argc, char *argv[]) {
             timeNow();
             waitTime = current.tv_sec + 10;
             int read = 512;
-            if (count < 512)
+		printf("%d %d COUNT\n", count, bytesRead);
+            if (count <= 512)
                 read = bytesRead;
             receiveACK(NULL, 0, read);
         }
