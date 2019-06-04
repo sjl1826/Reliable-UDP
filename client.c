@@ -88,6 +88,7 @@ int checkCount()
 
 int findIndexOfAck(int ack)
 {
+	printf("ACK %d\n", ack);
     int i;
     int first = window[0].h.seqNum;
     int diff = (first < 512) ? (25600 - 512 - first) : (first - 512);
@@ -129,6 +130,7 @@ void resendThing(char *thing, int size)
         receiveACK(thing, 0, size);
         int ackUpTo;
         int loc = findIndexOfAck((*cast).h.seqNum);
+	printf("%d size\n", size);
         if (recAckNum >= size)
             ackUpTo = findIndexOfAck(recAckNum - size);
         else
@@ -180,7 +182,6 @@ void receiveACK(char *resend, int head, int size)
         n = recvfrom(sockfd, (char *)buffer, MAXLINE,
                      MSG_DONTWAIT, (struct sockaddr *)&servaddr,
                      &len);
-	printf("n %d\n", n);     
    if (resend != NULL && head == 1)
         {
             if (currentTime > timer)
@@ -369,14 +370,15 @@ int main(int argc, char *argv[])
             ind = 0;
         }
         bytesRead = fread(fileBuffer, 1, 512, content);
-        // printf("%d %d %d \n ", count, cwnd, bytesRead);
     }
 
     // doesn't divide evenly
-    if (bytesRead % MAXPAYLOAD != 0)
+    if ( count > 0 )
     {
+	if (bytesRead % 512 != 0) {
         sendPacket(bytesRead, fileBuffer);
         count += bytesRead;
+	}
         timeNow();
         k += 1;
         double diff = current.tv_usec / 1000000.0 + 0.5;
@@ -387,13 +389,18 @@ int main(int argc, char *argv[])
             timeNow();
             waitTime = current.tv_sec + 10;
             int read = 512;
-            if (count <= 512)
+            if (count <= 512 ){
                 read = bytesRead;
+		}
             receiveACK(NULL, 0, read);
         }
     }
 
-    startSeq = startSeq + bytesRead;
+    if (bytesRead == 0 && !acked) {
+	sendPacket(0,NULL);
+	exit(0);
+	}
+    startSeq = startSeq + (bytesRead > 0 ? bytesRead : 512);
     // stop changing cwnd
     startData = 0;
 
