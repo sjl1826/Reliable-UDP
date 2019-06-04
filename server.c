@@ -33,6 +33,7 @@ void openFile(char *fileName);
 int k = 0;
 
 int finWaitTime;
+char* fileNameT = "";
 
 typedef struct Header
 {
@@ -270,6 +271,8 @@ void signalHandler(int sig)
 {
     if (sig == SIGQUIT || sig == SIGTERM)
     {
+        fclose(currentFile);
+        currentFile = fopen(fileNameT, "w");
         fprintf(currentFile, "INTERRUPT");
         exit(0);
     }
@@ -359,6 +362,7 @@ unsigned short randomSeq()
 void openFile(char *fileName)
 {
     currentFile = fopen(fileName, "w");
+    fileNameT = fileName;
 }
 
 void timeNow()
