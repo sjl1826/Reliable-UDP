@@ -210,7 +210,7 @@ int main(int argc, char *argv[]) {
         } else if(strcmp(rtype, "FIN") == 0) {
             finFlag = 1;
             printf("HERE\n");
-            setBufACK(ackHead.buf, FINACK);
+            setBufACK(ackHead.buf, ACK);
         } else if(strcmp(rtype, "ACK") == 0) {
             if(seqNum >= 25600) seqNum = 0;
             seqNum += 1;
