@@ -141,8 +141,8 @@ void resendThing(char *thing, int size)
     timer = currentTime + 0.5;
     if (size > 12)
     {
-        cwnd = 512;
         ssthresh = (1024 > cwnd / 2) ? 1024 : cwnd / 2;
+        cwnd = 512;
         Packet *cast = (Packet *)thing;
         sType = ackType((*cast).h.buf);
         printf("SEND %d %d %d %d %s %s\n", (*cast).h.seqNum, (*cast).h.ackNum,
@@ -206,8 +206,8 @@ void receiveACK(char *resend, int head, int size) {
             if (currentTime > timer)
             {
                 resendThing(resend, 12);
-                cwnd = 512;
                 ssthresh = (1024 > cwnd / 2) ? 1024 : cwnd / 2;
+                cwnd = 512;
                 return;
             }
         }
