@@ -247,10 +247,7 @@ void receiveACK(char *resend, int head, int size)
         int ackOnce = 0;
         int i = 0;
         printf("FROM RECV %d %d \n", size, tempSize);
-        if (recAckNum >= 512)
-            ackUpTo = findIndexOfAck(recAckNum - tempSize);
-        else
-            ackUpTo = findIndexOfAck(25600 - (tempSize - recAckNum));
+        ackUpTo = findIndexOfAck(recAckNum);
         for (i = 0; i <= ackUpTo; i++)
         {
             if (window[i].h.padding == 0)
