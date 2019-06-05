@@ -54,6 +54,7 @@ void initiateFINProcess(int sockfd, const struct sockaddr *cliaddr, int len, int
 {
     if (current.tv_sec > finWaitTime) {
         close(sockfd);
+	fclose(currentFile);
 	return;
 	}
     Header fin;

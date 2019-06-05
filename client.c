@@ -87,12 +87,10 @@ int checkCount()
     return total;
 }
 
-int returnSize(char* thing) {
-    Packet *cast = (Packet *)thing;
-    int seq = (*cast).h.seqNum;
+int returnSize() {
     for (int i = 0; i < ind; i++)
     {
-        if (window[i].h.seqNum == seq)
+        if (window[i].h.padding == 0)
             return sizeP[i];
     }
     return 512;
@@ -106,15 +104,18 @@ int findIndexOfAck(int ack)
     if (ack == diff)
         return -1;
     int found = 0;
+	int newA = 0;
     for (i = 0; i < ind; i += 1)
     {
-        if (ack >= 512)
-            ack = ack - sizeP[i];
-        else if (sizeP[i] < ack)
-            ack = ack - sizeP[i]
+//       printf(" before %d %d\n", ack, window[i].h.seqNum);
+	 if (ack >= 512)
+            newA = ack - sizeP[i];
+        else if (sizeP[i] < ack && ack < 512)
+            newA = ack - sizeP[i];
         else
-            ack = 25600 - (sizeP[i] - ack)
-        if (window[i].h.seqNum == ack)
+            newA = 25600 - (sizeP[i] - ack);
+  //      printf(" after %d %d\n", newA, window[i].h.seqNum);
+	if (window[i].h.seqNum == newA)
         {
             found = 1;
             break;
@@ -146,7 +147,6 @@ void resendThing(char *thing, int size)
                cwnd, ssthresh, sType, dup);
         receiveACK(thing, 0, -1);
         int ackUpTo;
-        printf("FROM RESEND %d\n", size);
         int loc = findIndexOfAck((*cast).h.seqNum);
         ackUpTo = findIndexOfAck(recAckNum);
         if (ackUpTo < loc)
@@ -184,10 +184,10 @@ void handleTimeOut(int size)
     }
 }
 
-void receiveACK(char *resend, int head, int size)
-{   int tempSize = size;
-    if(size == -1)
-        tempSize = returnSize(resend);
+void receiveACK(char *resend, int head, int size) {
+	int tempSize = size;
+	if (size == -1)
+        	tempSize = returnSize();
     int n = 0;
     while (current.tv_sec <= waitTime && n <= 0)
     {
@@ -198,6 +198,7 @@ void receiveACK(char *resend, int head, int size)
                      &len);
         if (resend != NULL && head == 1)
         {
+//	printf("%.3f %.3f timer\n", currentTime, timer);
             if (currentTime > timer)
             {
                 resendThing(resend, 12);
@@ -224,10 +225,15 @@ void receiveACK(char *resend, int head, int size)
     if (n <= 0)
     {
         if (!finTime)
-        {
+        { 	close(sockfd);
             fprintf(stderr, "No response");
             exit(1);
         }
+	timeNow();
+	if(current.tv_sec > waitTime) {
+	close(sockfd);
+	exit(0);
+}
     }
     buffer[n] = '\0';
     Header *receivedHead = (Header *)buffer;
@@ -238,15 +244,17 @@ void receiveACK(char *resend, int head, int size)
     recSeqNum = (*receivedHead).seqNum;
     printf("RECV %d %d %d %d %s\n", recSeqNum, recAckNum, cwnd,
            ssthresh, rType);
+    if (!finTime)
+{
     timeNow();
     waitTime = current.tv_sec + 10;
+}
     // ACK the packet
     if (head == 0)
     {
         int ackUpTo = 0;
         int ackOnce = 0;
         int i = 0;
-        printf("FROM RECV %d %d \n", size, tempSize);
         ackUpTo = findIndexOfAck(recAckNum);
         for (i = 0; i <= ackUpTo; i++)
         {
@@ -280,6 +288,7 @@ void receiveACK(char *resend, int head, int size)
 int main(int argc, char *argv[])
 {
     memset(&window, 0, sizeof(window));
+    memset(&sizeP, 0, sizeof(sizeP));
     if (argc < 4)
     {
         fprintf(stderr, "ERROR: Not enough arguments");
@@ -375,7 +384,7 @@ int main(int argc, char *argv[])
             {
                 timeNow();
                 waitTime = current.tv_sec + 10;
-                receiveACK(NULL, 0, 512);
+                receiveACK(NULL, 0, -1);
             }
             // this means we got everything, move on to next thing
             memset(&window, 0, sizeof(window));
@@ -396,6 +405,7 @@ int main(int argc, char *argv[])
         double diff = current.tv_usec / 1000000.0 + 0.5;
         double sec = current.tv_sec * 1.0;
         timer = sec + diff;
+	printf("BREAK HERE?");
         while (count > 0)
         {
             timeNow();
@@ -408,7 +418,7 @@ int main(int argc, char *argv[])
         sendPacket(0,NULL);
         exit(0);
     }
-    startSeq = startSeq + (bytesRead > 0 ? bytesRead : 512);
+    startSeq = recAckNum;
     // stop changing cwnd
     startData = 0;
     
@@ -447,8 +457,9 @@ int main(int argc, char *argv[])
     finTime = 1;
     
     timeNow();
-    waitTime = current.tv_sec + 2;
-    while (current.tv_sec < waitTime) {
+    double finWait = current.tv_sec + 2;
+    waitTime = finWait;
+    while (current.tv_sec < finWait) {
         receiveACK(NULL, 1, 12);
         
         //do i need to do this if it closes?
@@ -644,3 +655,4 @@ void sendPacket(int bytesRead, char *fileBuffer)
     window[ind] = pack;
     sizeP[ind] = bytesRead;
     ind += 1;
+}
