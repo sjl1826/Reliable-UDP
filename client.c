@@ -44,7 +44,6 @@ int finTime = 0;
 int startData = 0;
 int finOk = 0;
 int waitFinAck = 0;
-int finReceived = 0;
 
 char buffer[MAXLINE];
 
@@ -106,18 +105,18 @@ int findIndexOfAck(int ack)
     if (ack == diff)
         return -1;
     int found = 0;
-	int newA = 0;
+    int newA = 0;
     for (i = 0; i < ind; i += 1)
     {
-//       printf(" before %d %d\n", ack, window[i].h.seqNum);
-	 if (ack >= 512)
+        //       printf(" before %d %d\n", ack, window[i].h.seqNum);
+        if (ack >= 512)
             newA = ack - sizeP[i];
         else if (sizeP[i] < ack && ack < 512)
             newA = ack - sizeP[i];
         else
             newA = 25600 - (sizeP[i] - ack);
-  //      printf(" after %d %d\n", newA, window[i].h.seqNum);
-	if (window[i].h.seqNum == newA)
+        //      printf(" after %d %d\n", newA, window[i].h.seqNum);
+        if (window[i].h.seqNum == newA)
         {
             found = 1;
             break;
@@ -167,6 +166,8 @@ void resendThing(char *thing, int size)
         if (recAckNum != (((*cast).seqNum == 25600) ? 0 : (*cast).seqNum + 1))
         {
             resendThing(thing, size);
+        } else if (waitFinAck) {
+            finOk = 1;
         }
         
     }
@@ -188,9 +189,9 @@ void handleTimeOut(int size)
 }
 
 void receiveACK(char *resend, int head, int size) {
-	int tempSize = size;
-	if (size == -1)
-        	tempSize = returnSize();
+    int tempSize = size;
+    if (size == -1)
+        tempSize = returnSize();
     int n = 0;
     while (current.tv_sec <= waitTime && n <= 0)
     {
@@ -227,16 +228,16 @@ void receiveACK(char *resend, int head, int size) {
     if (n <= 0)
     {
         if (!finTime)
-        { 	close(sockfd);
+        {     close(sockfd);
             fprintf(stderr, "No response");
             exit(1);
         }
-	timeNow();
-//	printf("%lu %lu  waitTime\n",current.tv_sec,  waitTime);
-	if(current.tv_sec > waitTime) {
-	close(sockfd);
-	exit(0);
-}
+        timeNow();
+        //    printf("%lu %lu  waitTime\n",current.tv_sec,  waitTime);
+        if(current.tv_sec > waitTime) {
+            close(sockfd);
+            exit(0);
+        }
     }
     buffer[n] = '\0';
     Header *receivedHead = (Header *)buffer;
@@ -248,10 +249,10 @@ void receiveACK(char *resend, int head, int size) {
     printf("RECV %d %d %d %d %s\n", recSeqNum, recAckNum, cwnd,
            ssthresh, rType);
     if (!finTime)
-{
-    timeNow();
-    waitTime = current.tv_sec + 10;
-}
+    {
+        timeNow();
+        waitTime = current.tv_sec + 10;
+    }
     // ACK the packet
     if (head == 0)
     {
@@ -289,9 +290,7 @@ void receiveACK(char *resend, int head, int size) {
     if (head == 1 && waitFinAck)
         if (recAckNum == 0 && startSeq == 25600 || (recAckNum == startSeq +1))
             finOk = 1;
-        else
-            finReceived = 1;
-            
+    
 }
 
 int main(int argc, char *argv[])
@@ -461,27 +460,19 @@ int main(int argc, char *argv[])
     waitTime = current.tv_sec + 10;
     timer = current.tv_sec + current.tv_usec / 1000000.0 + 0.5;
     waitFinAck = 1;
-    
-    receiveACK(finH, 1, 12);
+    while (!finOk) {
+        receiveACK(finH, 1, 12);
+    }
     
     
     // for 2 seconds from server
-    if (!finReceived)
-        finTime = 1;
+    finTime = 1;
     
     timeNow();
-    
-    unsigned long finWait;
-    if (!finReceived) {
-    finWait = current.tv_sec + 2;
+    unsigned long finWait = current.tv_sec + 2;
     waitTime = finWait;
-    } else {
-        finWait = current.tv_sec + 10;
-        waitTime = finWait;
-    }
-	startSeq +=1;
+    startSeq +=1;
     while (current.tv_sec < finWait) {
-        if(!finReceived) {
         receiveACK(NULL, 1, 12);
         //do i need to do this if it closes?
         Header finAck;
@@ -499,7 +490,6 @@ int main(int argc, char *argv[])
         {
             finAck.seqNum = startSeq;
         }
-        }
         
         finAck.seqNum = startSeq;
         finAck.ackNum = recSeqNum + 1;
@@ -513,7 +503,6 @@ int main(int argc, char *argv[])
         printf("SEND %d %d %d %d %s\n", finAck.seqNum, finAck.ackNum,
                cwnd, ssthresh, sTypeFinAck);
         timeNow();
-        finReceived = 1;
     }
     
     fclose(content);
