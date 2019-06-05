@@ -42,7 +42,8 @@ unsigned long waitTime;
 int acked = 0;
 int finTime = 0;
 int startData = 0;
-int finNum = 0;
+int finOk = 0;
+int waitFinAck = 0;
 
 char buffer[MAXLINE];
 
@@ -165,7 +166,10 @@ void resendThing(char *thing, int size)
         if (recAckNum != (((*cast).seqNum == 25600) ? 0 : (*cast).seqNum + 1))
         {
             resendThing(thing, size);
+        } else if (waitFinAck) {
+            finOk = 1; 
         }
+        
     }
     //this is how many packets left, we should receive for
     count = checkCount() * 512;
@@ -198,7 +202,6 @@ void receiveACK(char *resend, int head, int size) {
                      &len);
         if (resend != NULL && head == 1)
         {
-	printf("%.3f %.3f timer\n", currentTime, timer);
             if (currentTime > timer)
             {
                 resendThing(resend, 12);
@@ -285,6 +288,10 @@ void receiveACK(char *resend, int head, int size) {
             }
         }
     }
+    if (head == 1)
+        if (recAckNum == 0 && startSeq == 25600 || (recAckNum == startSeq +1))
+            finOk = 1;
+            
 }
 
 int main(int argc, char *argv[])
@@ -453,14 +460,18 @@ int main(int argc, char *argv[])
     timeNow();
     waitTime = current.tv_sec + 10;
     timer = current.tv_sec + current.tv_usec / 1000000.0 + 0.5;
+    waitFinAck = 1;
+    while (!finOk) {
     receiveACK(finH, 1, 12);
+    }
+    
+    
     // for 2 seconds from server
     finTime = 1;
     
     timeNow();
     unsigned long finWait = current.tv_sec + 2;
     waitTime = finWait;
-	printf("WAIT HERE %lu\n", waitTime);
     while (current.tv_sec < finWait) {
         receiveACK(NULL, 1, 12);
         
