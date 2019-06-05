@@ -164,6 +164,8 @@ void resendThing(char *thing, int size)
         printf("SEND %d %d %d %d %s %s\n", (*cast).seqNum, (*cast).ackNum,
                cwnd, ssthresh, sType, dup);
         receiveACK(thing, 1, size);
+	if (waitFinAck && finReceived)
+		return;
         if (recAckNum != (((*cast).seqNum == 25600) ? 0 : (*cast).seqNum + 1))
         {
             resendThing(thing, size);
