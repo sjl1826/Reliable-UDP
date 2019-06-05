@@ -198,7 +198,7 @@ void receiveACK(char *resend, int head, int size) {
                      &len);
         if (resend != NULL && head == 1)
         {
-//	printf("%.3f %.3f timer\n", currentTime, timer);
+	printf("%.3f %.3f timer\n", currentTime, timer);
             if (currentTime > timer)
             {
                 resendThing(resend, 12);
@@ -222,6 +222,7 @@ void receiveACK(char *resend, int head, int size) {
             }
         }
     }
+	printf("%d n is this\n", n);
     if (n <= 0)
     {
         if (!finTime)
@@ -230,6 +231,7 @@ void receiveACK(char *resend, int head, int size) {
             exit(1);
         }
 	timeNow();
+	printf("%lu %lu  waitTime\n",current.tv_sec,  waitTime);
 	if(current.tv_sec > waitTime) {
 	close(sockfd);
 	exit(0);
@@ -405,7 +407,6 @@ int main(int argc, char *argv[])
         double diff = current.tv_usec / 1000000.0 + 0.5;
         double sec = current.tv_sec * 1.0;
         timer = sec + diff;
-	printf("BREAK HERE?");
         while (count > 0)
         {
             timeNow();
@@ -457,8 +458,9 @@ int main(int argc, char *argv[])
     finTime = 1;
     
     timeNow();
-    double finWait = current.tv_sec + 2;
+    unsigned long finWait = current.tv_sec + 2;
     waitTime = finWait;
+	printf("WAIT HERE %lu\n", waitTime);
     while (current.tv_sec < finWait) {
         receiveACK(NULL, 1, 12);
         
@@ -491,7 +493,7 @@ int main(int argc, char *argv[])
         char *sTypeFinAck = ackType(finAck.buf);
         printf("SEND %d %d %d %d %s\n", finAck.seqNum, finAck.ackNum,
                cwnd, ssthresh, sTypeFinAck);
-        timeNow();
+	timeNow();
     }
     
     fclose(content);

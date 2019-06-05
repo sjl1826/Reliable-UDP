@@ -53,8 +53,10 @@ struct Packet packetBuff[40];
 void initiateFINProcess(int sockfd, const struct sockaddr *cliaddr, int len, int seqNum, int ackNum)
 {
     if (current.tv_sec > finWaitTime) {
-        close(sockfd);
-	fclose(currentFile);
+	if (currentFile != NULL) {
+		fclose(currentFile);
+		currentFile = NULL; 
+	}
 	return;
 	}
     Header fin;
@@ -76,7 +78,11 @@ void initiateFINProcess(int sockfd, const struct sockaddr *cliaddr, int len, int
 	currentTime = current.tv_sec*1.0 + current.tv_usec/1000000.0;
         if (current.tv_sec > finWaitTime)
         {
-            fclose(currentFile);
+		 if (currentFile != NULL) {
+                fclose(currentFile);
+                currentFile = NULL; 
+        }
+
             return;
         } else if (currentTime > timer) {
 		initiateFINProcess(sockfd, (const struct sockaddr *)&cliaddr, len, 
@@ -90,7 +96,11 @@ void initiateFINProcess(int sockfd, const struct sockaddr *cliaddr, int len, int
     char *receivedACKType = ackType((*receivedACK).buf);
     if (strcmp(receivedACKType, "ACK") == 0)
     {
-        fclose(currentFile);
+	 if (currentFile != NULL) {
+                fclose(currentFile);
+                currentFile = NULL; 
+        }
+
     }
     printf("RECV %hu %hu %d %d %s\n", (*receivedACK).seqNum, (*receivedACK).ackNum, 0, 0, receivedACKType);
 }
