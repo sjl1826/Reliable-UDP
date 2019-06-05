@@ -158,6 +158,8 @@ void resendThing(char *thing, int size)
     }
     else
     {
+	ssthresh = (1024 > cwnd / 2) ? 1024 : cwnd / 2;
+        cwnd = 512;
         //resend until we get it
         Header *cast = (Header *)thing;
         sType = ackType((*cast).buf);
