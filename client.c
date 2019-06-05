@@ -44,6 +44,7 @@ int finTime = 0;
 int startData = 0;
 int finOk = 0;
 int waitFinAck = 0;
+int finReceived = 0;
 
 char buffer[MAXLINE];
 
@@ -166,8 +167,6 @@ void resendThing(char *thing, int size)
         if (recAckNum != (((*cast).seqNum == 25600) ? 0 : (*cast).seqNum + 1))
         {
             resendThing(thing, size);
-        } else if (waitFinAck) {
-            finOk = 1; 
         }
         
     }
@@ -290,6 +289,8 @@ void receiveACK(char *resend, int head, int size) {
     if (head == 1 && waitFinAck)
         if (recAckNum == 0 && startSeq == 25600 || (recAckNum == startSeq +1))
             finOk = 1;
+        else
+            finReceived = 1;
             
 }
 
@@ -460,19 +461,27 @@ int main(int argc, char *argv[])
     waitTime = current.tv_sec + 10;
     timer = current.tv_sec + current.tv_usec / 1000000.0 + 0.5;
     waitFinAck = 1;
-    while (!finOk) {
+    
     receiveACK(finH, 1, 12);
-    }
     
     
     // for 2 seconds from server
-    finTime = 1;
+    if (!finReceived)
+        finTime = 1;
     
     timeNow();
-    unsigned long finWait = current.tv_sec + 2;
+    
+    unsigned long finWait;
+    if (!finReceived) {
+    finWait = current.tv_sec + 2;
     waitTime = finWait;
+    } else {
+        finWait = current.tv_sec + 10;
+        waitTime = finWait;
+    }
 	startSeq +=1;
     while (current.tv_sec < finWait) {
+        if(!finReceived) {
         receiveACK(NULL, 1, 12);
         //do i need to do this if it closes?
         Header finAck;
@@ -490,6 +499,7 @@ int main(int argc, char *argv[])
         {
             finAck.seqNum = startSeq;
         }
+        }
         
         finAck.seqNum = startSeq;
         finAck.ackNum = recSeqNum + 1;
@@ -502,7 +512,8 @@ int main(int argc, char *argv[])
         char *sTypeFinAck = ackType(finAck.buf);
         printf("SEND %d %d %d %d %s\n", finAck.seqNum, finAck.ackNum,
                cwnd, ssthresh, sTypeFinAck);
-	timeNow();
+        timeNow();
+        finReceived = 1;
     }
     
     fclose(content);
