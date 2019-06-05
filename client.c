@@ -225,7 +225,6 @@ void receiveACK(char *resend, int head, int size) {
             }
         }
     }
-	printf("%d n is this\n", n);
     if (n <= 0)
     {
         if (!finTime)
@@ -234,7 +233,7 @@ void receiveACK(char *resend, int head, int size) {
             exit(1);
         }
 	timeNow();
-	printf("%lu %lu  waitTime\n",current.tv_sec,  waitTime);
+//	printf("%lu %lu  waitTime\n",current.tv_sec,  waitTime);
 	if(current.tv_sec > waitTime) {
 	close(sockfd);
 	exit(0);
@@ -288,7 +287,7 @@ void receiveACK(char *resend, int head, int size) {
             }
         }
     }
-    if (head == 1)
+    if (head == 1 && waitFinAck)
         if (recAckNum == 0 && startSeq == 25600 || (recAckNum == startSeq +1))
             finOk = 1;
             
@@ -472,12 +471,11 @@ int main(int argc, char *argv[])
     timeNow();
     unsigned long finWait = current.tv_sec + 2;
     waitTime = finWait;
+	startSeq +=1;
     while (current.tv_sec < finWait) {
         receiveACK(NULL, 1, 12);
-        
         //do i need to do this if it closes?
         Header finAck;
-        startSeq += 1;
         if (startSeq == 25600)
         {
             finAck.seqNum = startSeq;

@@ -33,7 +33,7 @@ void openFile(char *fileName);
 int k = 0;
 int synFlag = 0;
 
-int finWaitTime;
+unsigned long finWaitTime;
 char* fileNameT = "";
 double timer;
 typedef struct Header
@@ -52,10 +52,12 @@ typedef struct Packet
 struct Packet packetBuff[40];
 void initiateFINProcess(int sockfd, const struct sockaddr *cliaddr, int len, int seqNum, int ackNum)
 {
+
     if (current.tv_sec > finWaitTime) {
 	if (currentFile != NULL) {
 		fclose(currentFile);
 		currentFile = NULL; 
+
 	}
 	return;
 	}
@@ -67,7 +69,7 @@ void initiateFINProcess(int sockfd, const struct sockaddr *cliaddr, int len, int
     sendto(sockfd, (const char *)&fin, 12, MSG_CONFIRM, cliaddr, len);
     printf("SEND %hu %hu %d %d %s\n", fin.seqNum, fin.ackNum, 0, 0, type);
     timeNow();
-    int new_sock;
+    int new_sock = 0;
     char buff[MAXLINE];
     double currentTime = current.tv_sec*1.0 + current.tv_usec/1000000.0;
     timer = currentTime + 0.5;
@@ -80,15 +82,24 @@ void initiateFINProcess(int sockfd, const struct sockaddr *cliaddr, int len, int
         {
 		 if (currentFile != NULL) {
                 fclose(currentFile);
-                currentFile = NULL; 
-        }
-
-            return;
+                currentFile = NULL;
+		}
+		return;
         } else if (currentTime > timer) {
+
 		initiateFINProcess(sockfd, (const struct sockaddr *)&cliaddr, len, 
                 seqNum, 0);
 		return;
 	}
+	if ( new_sock > 0) {
+	buff[new_sock] = '\0';
+   	Header *receivedACK = (Header *)buff;
+	if (seqNum == 25600 && (*receivedACK).ackNum != 0)
+		new_sock =-1;
+	if (seqNum +1 != (*receivedACK).ackNum)
+		new_sock = -1;
+	}
+	
     }
 
     buff[new_sock] = '\0';
@@ -99,6 +110,8 @@ void initiateFINProcess(int sockfd, const struct sockaddr *cliaddr, int len, int
 	 if (currentFile != NULL) {
                 fclose(currentFile);
                 currentFile = NULL; 
+
+
         }
 
     }
@@ -166,7 +179,6 @@ int main(int argc, char *argv[])
             timeNow();
         }
 	double currentTime = current.tv_sec*1.0 + current.tv_usec/1000000.0;
-//	printf("TIME: %.3f\n",currentTime);
         if (new_socket < 0 && isFirstPacket == 0)
         {
             initiateFINProcess(sockfd, (const struct sockaddr *)&cliaddr, len, seqNum, 0);
@@ -227,6 +239,7 @@ int main(int argc, char *argv[])
 
         if (strcmp(rtype, "SYN") == 0)
         {
+	    seqNum = randomSeq();
             setBufACK(ackHead.buf, SYNACK);
 	    synFlag = 1;
         }
