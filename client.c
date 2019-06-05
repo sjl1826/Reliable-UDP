@@ -44,6 +44,7 @@ int finTime = 0;
 int startData = 0;
 int finOk = 0;
 int waitFinAck = 0;
+int finReceived = 0;
 
 char buffer[MAXLINE];
 
@@ -166,8 +167,6 @@ void resendThing(char *thing, int size)
         if (recAckNum != (((*cast).seqNum == 25600) ? 0 : (*cast).seqNum + 1))
         {
             resendThing(thing, size);
-        } else if (waitFinAck) {
-            finOk = 1;
         }
         
     }
@@ -287,9 +286,14 @@ void receiveACK(char *resend, int head, int size) {
             }
         }
     }
-    if (head == 1 && waitFinAck)
+    if (head == 1 && waitFinAck) {
         if (recAckNum == 0 && startSeq == 25600 || (recAckNum == startSeq +1))
             finOk = 1;
+        else
+            finReceived = 1;
+        
+    }
+
     
 }
 
@@ -460,41 +464,52 @@ int main(int argc, char *argv[])
     waitTime = current.tv_sec + 10;
     timer = current.tv_sec + current.tv_usec / 1000000.0 + 0.5;
     waitFinAck = 1;
-    while (!finOk) {
-        receiveACK(finH, 1, 12);
-    }
+    
+    receiveACK(finH, 1, 12);
     
     
-    // for 2 seconds from server
-    finTime = 1;
+    if (!finReceived) // got ack not fin
+        finTime = 1;
     
     timeNow();
-    unsigned long finWait = current.tv_sec + 2;
-    waitTime = finWait;
+    
+    unsigned long finWait;
+    if (!finReceived) { // got ack
+        finWait = current.tv_sec + 2;
+        waitTime = finWait;
+    } else { // got fin
+        finWait = current.tv_sec + 10;
+        waitTime = finWait;
+    }
+    
+    Header finAck;
     startSeq +=1;
+    finAck.ackNum = recSeqNum + 1;
+    finAck.seqNum = startSeq;
+    setBufACK(finAck.buf, ACK);
+    finAck.padding = 0;
     while (current.tv_sec < finWait) {
-        receiveACK(NULL, 1, 12);
-        //do i need to do this if it closes?
-        Header finAck;
-        if (startSeq == 25600)
-        {
-            finAck.seqNum = startSeq;
-            startSeq = 0;
-        }
-        else if (startSeq > 25600)
-        {
-            startSeq = 0;
-            finAck.seqNum = startSeq;
-        }
-        else
-        {
-            finAck.seqNum = startSeq;
+        if(!finReceived) {
+            receiveACK(NULL, 1, 12);
+            //do i need to do this if it closes?
+    
+            if (startSeq == 25600)
+            {
+                finAck.seqNum = startSeq;
+                startSeq = 0;
+            }
+            else if (startSeq > 25600)
+            {
+                startSeq = 0;
+                finAck.seqNum = startSeq;
+            }
+            else
+            {
+                finAck.seqNum = startSeq;
+            }
         }
         
-        finAck.seqNum = startSeq;
-        finAck.ackNum = recSeqNum + 1;
-        setBufACK(finAck.buf, ACK);
-        finAck.padding = 0;
+        
         char *finAckH = (char *)&finAck;
         sendto(sockfd, (const char *)finAckH, 12,
                MSG_CONFIRM, (const struct sockaddr *)&servaddr,
@@ -503,6 +518,7 @@ int main(int argc, char *argv[])
         printf("SEND %d %d %d %d %s\n", finAck.seqNum, finAck.ackNum,
                cwnd, ssthresh, sTypeFinAck);
         timeNow();
+        finReceived = 0;
     }
     
     fclose(content);
