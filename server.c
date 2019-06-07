@@ -50,7 +50,6 @@ typedef struct Packet
     char payload[512];
 } Packet;
 struct Packet packetBuff[40];
-int sizes[40];
 void initiateFINProcess(int sockfd, const struct sockaddr *cliaddr, int len, int seqNum, int ackNum)
 {
 
@@ -119,7 +118,6 @@ void initiateFINProcess(int sockfd, const struct sockaddr *cliaddr, int len, int
     printf("RECV %hu %hu %d %d %s\n", (*receivedACK).seqNum, (*receivedACK).ackNum, 0, 0, receivedACKType);
 }
 
-
 int main(int argc, char *argv[])
 {
     if (argc < 2)
@@ -145,8 +143,7 @@ int main(int argc, char *argv[])
 
     memset(&servaddr, 0, sizeof(servaddr));
     memset(&cliaddr, 0, sizeof(cliaddr));
-    memset(&sizes, 0, sizeof(sizes);
-    memset(&packetBuff, 0, sizeof(packetBuff);
+
     // Filling server information
     servaddr.sin_family = AF_INET; // IPv4
     servaddr.sin_addr.s_addr = INADDR_ANY;
@@ -169,8 +166,7 @@ int main(int argc, char *argv[])
     int isFirstPacket = 1;
     unsigned short seqNum = randomSeq();
     char fileName[8];
-    int buffPos = 0;
-           int gap = 0;
+
     while (1)
     {
         // Receive packet
@@ -211,7 +207,6 @@ int main(int argc, char *argv[])
 
         Header ackHead;
         unsigned short newACKNum = (*receivedHead).seqNum;
-        int currentNum = newACKNum;
         if (isFirstPacket == 0 && newACKNum != prevACKNum)
         {
             ackHead.seqNum = seqNum;
@@ -223,9 +218,7 @@ int main(int argc, char *argv[])
                    MSG_CONFIRM, (const struct sockaddr *)&cliaddr,
                    len);
             printf("SEND %hu %hu %d %d %s\n", ackHead.seqNum, ackHead.ackNum, 0, 0, stype);
-            packetBuff[buffPos] = *receivedPacket;
-            sizes[buffPos] = new_socket-12;
-            buffPos+=1;
+
             continue;
         }
 
@@ -262,24 +255,6 @@ int main(int argc, char *argv[])
             k += 1;
             if (currentFile != NULL)
                 fwrite((*receivedPacket).payload, 1, new_socket - 12, currentFile);
-            for (int i = gap; i < buffPos; i++) {
-                int num = currentNum + new_socket - 12;
-                int other =  i > 0 ? currentNum + sizes[i-1] : NULL;
-                int ack =  (num > 25600) ? num % 25600 : num;
-                int otherAck = NULL;
-                if (other != NULL)
-                    otherAck = (other  > 25600) ? other % 25600 : other;
-                if (packetBuff[i].seqNum == (ack) || (otherAck != NULL && packetBuff[i].seqNum == otherAck))
-                    fwrite((packetBuff[i].payload, 1, sizes[i], currentFile);
-                           currentNum = packetBuff[i].seqNum;
-                           }
-            if (i == buffPos) {
-                memset(&sizes, 0, sizeof(sizes);
-                memset(&packetBuff, 0, sizeof(packetBuff);
-                buffPos = 0;
-                gap = 0;
-            } else gap = i;
-                                             
         }
         else if (strcmp(rtype, "FIN") == 0)
         {
@@ -302,6 +277,7 @@ int main(int argc, char *argv[])
                len);
 	timeNow();
 	currentTime = current.tv_sec*1.0 + current.tv_usec/1000000.0;
+  //      printf("TIME: %.3f\n",currentTime);
 
         printf("SEND %hu %hu %d %d %s\n", ackHead.seqNum, ackHead.ackNum, 0, 0, stype);
         if (strcmp(rtype, "ACK") == 0)
